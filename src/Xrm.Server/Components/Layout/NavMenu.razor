@@ -1,0 +1,60 @@
+@using Xrm.Server.Models
+@inject HttpClient Http
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">XRM</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+
+        <h6 class="nav-heading px-3 mt-3 mb-1 text-uppercase">Entities</h6>
+
+        @if (_entities is not null)
+        {
+            @foreach (var entity in _entities)
+            {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="@($"records/{entity.Id}")">
+                        <span class="bi bi-table-nav-menu" aria-hidden="true"></span>
+                        @(entity.DisplayName ?? entity.Name)
+                    </NavLink>
+                </div>
+            }
+        }
+
+        <hr class="mx-3" />
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="admin/entities">
+                <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span> Schema Designer
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private List<EntityDefinition>? _entities;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _entities = await Http.GetFromJsonAsync<List<EntityDefinition>>("api/entities");
+        }
+        catch
+        {
+            _entities = new();
+        }
+    }
+}
+

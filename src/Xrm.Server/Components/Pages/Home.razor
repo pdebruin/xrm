@@ -1,0 +1,54 @@
+﻿@page "/"
+@using Xrm.Server.Models
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<PageTitle>XRM</PageTitle>
+
+<div class="home-container">
+    @if (_entities is null)
+    {
+        <p>Loading...</p>
+    }
+    else if (_entities.Count == 0)
+    {
+        <div class="empty-state">
+            <h1>Welcome to XRM</h1>
+            <p>Your extensible relationship management platform is ready. Get started by loading demo data or creating your own entities.</p>
+            <div class="home-actions">
+                <button class="btn btn-primary" @onclick="LoadDemo" disabled="@_loading">
+                    @if (_loading) { <span>Loading...</span> } else { <span>Load Demo Data</span> }
+                </button>
+                <a href="admin/entities" class="btn btn-outline-secondary">Create Entities</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        @* Redirect to home entity or first entity *@
+        <p>Redirecting...</p>
+    }
+</div>
+
+@code {
+    private List<EntityDefinition>? _entities;
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _entities = await Http.GetFromJsonAsync<List<EntityDefinition>>("api/entities");
+
+        if (_entities?.Count > 0)
+        {
+            var home = _entities.FirstOrDefault(e => e.IsHomeEntity) ?? _entities.First();
+            Nav.NavigateTo($"records/{home.Id}");
+        }
+    }
+
+    private async Task LoadDemo()
+    {
+        _loading = true;
+        await Http.PostAsync("api/entities/seed-demo", null);
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+}

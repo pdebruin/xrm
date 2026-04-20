@@ -1,0 +1,306 @@
+@page "/records/{EntityId:guid}/new"
+@page "/records/{EntityId:guid}/{RecordId:guid}"
+@using System.Text.Json
+@using Xrm.Server.Models
+@inject HttpClient Http
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>@(_isNew ? "New" : "Edit") @(_entityDef?.DisplayName ?? "Record")</PageTitle>
+
+@if (_entityDef is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="detail-header">
+        <button class="btn btn-link" @onclick="GoBack">← Back to @(_entityDef.PluralName ?? _entityDef.DisplayName)</button>
+        <h3>@(_isNew ? "New" : "Edit") @(_entityDef.DisplayName ?? _entityDef.Name)</h3>
+    </div>
+
+    <div class="detail-form">
+        @foreach (var field in _fields)
+        {
+            <div class="mb-3">
+                <label class="form-label">
+                    @(field.DisplayName ?? field.Name)
+                    @if (field.IsRequired) { <span class="text-danger">*</span> }
+                </label>
+                @switch (field.DataType)
+                {
+                    case FieldDataType.Boolean:
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" 
+                                   checked="@GetBoolValue(field.Name)"
+                                   @onchange="(e) => SetValue(field.Name, e.Value)" />
+                        </div>
+                        break;
+
+                    case FieldDataType.Choice:
+                        <select class="form-select" value="@GetValue(field.Name)" 
+                                @onchange="(e) => SetValue(field.Name, e.Value)">
+                            <option value="">-- Select --</option>
+                            @foreach (var opt in GetOptions(field))
+                            {
+                                <option value="@opt">@opt</option>
+                            }
+                        </select>
+                        break;
+
+                    case FieldDataType.RichText:
+                        <textarea class="form-control" rows="4" 
+                                  value="@GetValue(field.Name)"
+                                  @onchange="(e) => SetValue(field.Name, e.Value)"></textarea>
+                        break;
+
+                    case FieldDataType.Number:
+                    case FieldDataType.Decimal:
+                        <input type="number" class="form-control" 
+                               step="@(field.DataType == FieldDataType.Decimal ? "0.01" : "1")"
+                               value="@GetValue(field.Name)"
+                               @onchange="(e) => SetValue(field.Name, e.Value)" />
+                        break;
+
+                    case FieldDataType.Date:
+                        <input type="date" class="form-control"
+                               value="@GetValue(field.Name)"
+                               @onchange="(e) => SetValue(field.Name, e.Value)" />
+                        break;
+
+                    case FieldDataType.DateTime:
+                        <input type="datetime-local" class="form-control"
+                               value="@GetValue(field.Name)"
+                               @onchange="(e) => SetValue(field.Name, e.Value)" />
+                        break;
+
+                    default:
+                        <input type="@GetInputType(field.DataType)" class="form-control"
+                               maxlength="@(field.MaxLength?.ToString() ?? "")"
+                               value="@GetValue(field.Name)"
+                               @onchange="(e) => SetValue(field.Name, e.Value)" />
+                        break;
+                }
+            </div>
+        }
+
+        @* Parent relationships as dropdowns *@
+        @foreach (var rel in _parentRelationships)
+        {
+            <div class="mb-3">
+                <label class="form-label">@(rel.DisplayName ?? rel.Name)</label>
+                <select class="form-select" value="@GetParentValue(rel.Id)" 
+                        @onchange="(e) => SetParentValue(rel.Id, e.Value?.ToString())">
+                    <option value="">-- None --</option>
+                    @if (_parentOptions.TryGetValue(rel.Id, out var options))
+                    {
+                        @foreach (var opt in options)
+                        {
+                            <option value="@opt.Id">@opt.Label</option>
+                        }
+                    }
+                </select>
+            </div>
+        }
+
+        <div class="detail-actions">
+            <button class="btn btn-primary" @onclick="Save" disabled="@_saving">
+                @(_saving ? "Saving..." : "Save")
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="GoBack">Cancel</button>
+        </div>
+    </div>
+
+    @* Child relationships *@
+    @if (!_isNew && _childRelationships.Any())
+    {
+        <hr />
+        <h4>Related Records</h4>
+        @foreach (var rel in _childRelationships)
+        {
+            <div class="related-section mb-3">
+                <h5>@(rel.DisplayName ?? rel.Name)</h5>
+                @if (_childRecords.TryGetValue(rel.Id, out var children))
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var child in children)
+                        {
+                            <li class="list-group-item list-group-item-action" 
+                                @onclick="() => NavigateToChild(child.EntityId, child.Id)">
+                                @child.Label
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted">None</p>
+                }
+            </div>
+        }
+    }
+}
+
+@code {
+    [Parameter] public Guid EntityId { get; set; }
+    [Parameter] public Guid? RecordId { get; set; }
+
+    private bool _isNew => RecordId is null;
+    private bool _saving;
+    private EntityDefinition? _entityDef;
+    private List<FieldDefinition> _fields = new();
+    private Dictionary<string, object?> _data = new();
+
+    private List<RelationshipDefinition> _parentRelationships = new();
+    private List<RelationshipDefinition> _childRelationships = new();
+    private Dictionary<Guid, List<ParentOption>> _parentOptions = new();
+    private Dictionary<Guid, string?> _parentValues = new();
+    private Dictionary<Guid, List<ChildRecord>> _childRecords = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _entityDef = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{EntityId}");
+        _fields = _entityDef?.Fields?.OrderBy(f => f.SortOrder).ToList() ?? new();
+
+        // Determine relationships
+        _parentRelationships = _entityDef?.TargetRelationships?
+            .Where(r => r.RelationshipType == RelationshipType.OneToMany)
+            .ToList() ?? new();
+        _childRelationships = _entityDef?.SourceRelationships?
+            .Where(r => r.RelationshipType == RelationshipType.OneToMany)
+            .ToList() ?? new();
+
+        // Load parent options
+        foreach (var rel in _parentRelationships)
+        {
+            var records = await Http.GetFromJsonAsync<RecordListResponse>($"api/entities/{rel.SourceEntityId}/records?pageSize=100");
+            var sourceEntity = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{rel.SourceEntityId}");
+            var displayField = sourceEntity?.Fields?.OrderBy(f => f.SortOrder).FirstOrDefault()?.Name ?? "Name";
+
+            _parentOptions[rel.Id] = records?.Records?.Select(r =>
+            {
+                var d = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(r.DataJson) ?? new();
+                var label = d.TryGetValue(displayField, out var v) ? v.ToString() : r.Id.ToString();
+                return new ParentOption { Id = r.Id, Label = label };
+            }).ToList() ?? new();
+        }
+
+        if (!_isNew)
+        {
+            var record = await Http.GetFromJsonAsync<Record>($"api/entities/{EntityId}/records/{RecordId}");
+            if (record is not null)
+            {
+                _data = JsonSerializer.Deserialize<Dictionary<string, object?>>(record.DataJson) ?? new();
+            }
+
+            // Load links to determine parent values and child records
+            var links = await Http.GetFromJsonAsync<List<RecordLinkDto>>($"api/entities/{EntityId}/records/{RecordId}/links") ?? new();
+
+            foreach (var rel in _parentRelationships)
+            {
+                var link = links.FirstOrDefault(l => l.RelationshipId == rel.Id && l.Direction == "incoming");
+                _parentValues[rel.Id] = link?.SourceRecordId.ToString();
+            }
+
+            foreach (var rel in _childRelationships)
+            {
+                var childLinks = links.Where(l => l.RelationshipId == rel.Id && l.Direction == "outgoing").ToList();
+                var children = new List<ChildRecord>();
+                foreach (var cl in childLinks)
+                {
+                    var childRec = await Http.GetFromJsonAsync<Record>($"api/entities/{rel.TargetEntityId}/records/{cl.TargetRecordId}");
+                    if (childRec is not null)
+                    {
+                        var d = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(childRec.DataJson) ?? new();
+                        var targetEntity = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{rel.TargetEntityId}");
+                        var displayField = targetEntity?.Fields?.OrderBy(f => f.SortOrder).FirstOrDefault()?.Name ?? "Name";
+                        var label = d.TryGetValue(displayField, out var v) ? v.ToString() : childRec.Id.ToString();
+                        children.Add(new ChildRecord { Id = childRec.Id, EntityId = rel.TargetEntityId, Label = label });
+                    }
+                }
+                _childRecords[rel.Id] = children;
+            }
+        }
+    }
+
+    private string GetValue(string fieldName)
+    {
+        if (_data.TryGetValue(fieldName, out var val) && val is not null)
+        {
+            if (val is JsonElement je) return je.ValueKind == JsonValueKind.Null ? "" : je.ToString();
+            return val.ToString() ?? "";
+        }
+        return "";
+    }
+
+    private bool GetBoolValue(string fieldName)
+    {
+        var v = GetValue(fieldName);
+        return v.Equals("true", StringComparison.OrdinalIgnoreCase) || v == "True";
+    }
+
+    private void SetValue(string fieldName, object? value) => _data[fieldName] = value;
+
+    private string GetParentValue(Guid relId) => _parentValues.TryGetValue(relId, out var v) ? v ?? "" : "";
+    private void SetParentValue(Guid relId, string? value) => _parentValues[relId] = value;
+
+    private List<string> GetOptions(FieldDefinition field)
+    {
+        if (string.IsNullOrEmpty(field.OptionsJson)) return new();
+        return JsonSerializer.Deserialize<List<string>>(field.OptionsJson) ?? new();
+    }
+
+    private string GetInputType(FieldDataType type) => type switch
+    {
+        FieldDataType.Email => "email",
+        FieldDataType.Phone => "tel",
+        FieldDataType.Url => "url",
+        _ => "text"
+    };
+
+    private async Task Save()
+    {
+        _saving = true;
+        var json = JsonSerializer.Serialize(_data);
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+        if (_isNew)
+        {
+            var response = await Http.PostAsync($"api/entities/{EntityId}/records", content);
+            if (response.IsSuccessStatusCode)
+            {
+                var created = await response.Content.ReadFromJsonAsync<Record>();
+                // TODO: handle parent links for new records
+                Nav.NavigateTo($"records/{EntityId}");
+            }
+        }
+        else
+        {
+            await Http.PutAsync($"api/entities/{EntityId}/records/{RecordId}", content);
+            Nav.NavigateTo($"records/{EntityId}");
+        }
+        _saving = false;
+    }
+
+    private void GoBack() => Nav.NavigateTo($"records/{EntityId}");
+    private void NavigateToChild(Guid entityId, Guid recordId) => Nav.NavigateTo($"records/{entityId}/{recordId}");
+
+    private class RecordListResponse
+    {
+        public List<Record> Records { get; set; } = new();
+        public int Total { get; set; }
+    }
+
+    private class RecordLinkDto
+    {
+        public Guid Id { get; set; }
+        public Guid RelationshipId { get; set; }
+        public string RelationshipName { get; set; } = "";
+        public Guid SourceRecordId { get; set; }
+        public Guid TargetRecordId { get; set; }
+        public string Direction { get; set; } = "";
+    }
+
+    private class ParentOption { public Guid Id { get; set; } public string Label { get; set; } = ""; }
+    private class ChildRecord { public Guid Id { get; set; } public Guid EntityId { get; set; } public string Label { get; set; } = ""; }
+}

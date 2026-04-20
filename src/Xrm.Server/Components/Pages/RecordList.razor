@@ -1,0 +1,176 @@
+@page "/records/{EntityId:guid}"
+@using System.Text.Json
+@using Xrm.Server.Models
+@inject HttpClient Http
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>@(_entityDef?.PluralName ?? _entityDef?.DisplayName ?? "Records")</PageTitle>
+
+@if (_entityDef is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="master-header">
+        <h2>@(_entityDef.PluralName ?? _entityDef.DisplayName ?? _entityDef.Name)</h2>
+        <button class="btn btn-primary btn-sm" @onclick="CreateNew">+ New</button>
+    </div>
+
+    <div class="master-toolbar">
+        <input type="text" class="form-control form-control-sm" placeholder="Filter..." 
+               @bind="_filterText" @bind:event="oninput" @bind:after="LoadRecords" />
+    </div>
+
+    <div class="master-grid">
+        <table class="table table-hover table-sm">
+            <thead>
+                <tr>
+                    <th class="col-check">
+                        <input type="checkbox" @onchange="ToggleSelectAll" />
+                    </th>
+                    @foreach (var field in _fields)
+                    {
+                        <th class="sortable" @onclick="() => SortBy(field.Name)">
+                            @(field.DisplayName ?? field.Name)
+                            @if (_sortField == field.Name)
+                            {
+                                <span>@(_sortDir == "asc" ? "▲" : "▼")</span>
+                            }
+                        </th>
+                    }
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_records is not null)
+                {
+                    @foreach (var record in _records)
+                    {
+                        var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(record.DataJson) ?? new();
+                        <tr class="@(_selected.Contains(record.Id) ? "table-active" : "")" @onclick="() => OpenDetail(record.Id)">
+                            <td class="col-check" @onclick:stopPropagation="true">
+                                <input type="checkbox" checked="@_selected.Contains(record.Id)" 
+                                       @onchange="(e) => ToggleSelect(record.Id, (bool)(e.Value ?? false))" />
+                            </td>
+                            @foreach (var field in _fields)
+                            {
+                                <td>@GetDisplayValue(data, field)</td>
+                            }
+                            <td>
+                                <button class="btn btn-link btn-sm text-danger" @onclick:stopPropagation="true" @onclick="() => DeleteRecord(record.Id)">✕</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="master-footer">
+        <span>@_total records</span>
+        @if (_selected.Count > 0)
+        {
+            <span class="ms-3">@_selected.Count selected</span>
+            <button class="btn btn-outline-danger btn-sm ms-2" @onclick="DeleteSelected">Delete Selected</button>
+        }
+        <div class="ms-auto">
+            <button class="btn btn-sm btn-outline-secondary" disabled="@(_page <= 1)" @onclick="PrevPage">← Prev</button>
+            <span class="mx-2">Page @_page</span>
+            <button class="btn btn-sm btn-outline-secondary" disabled="@(_records?.Count < _pageSize)" @onclick="NextPage">Next →</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid EntityId { get; set; }
+
+    private EntityDefinition? _entityDef;
+    private List<FieldDefinition> _fields = new();
+    private List<Record>? _records;
+    private int _total;
+    private int _page = 1;
+    private int _pageSize = 25;
+    private string _sortField = "";
+    private string _sortDir = "asc";
+    private string _filterText = "";
+    private HashSet<Guid> _selected = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _page = 1;
+        _selected.Clear();
+        _entityDef = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{EntityId}");
+        _fields = _entityDef?.Fields?.ToList() ?? new();
+        await LoadRecords();
+    }
+
+    private async Task LoadRecords()
+    {
+        var url = $"api/entities/{EntityId}/records?page={_page}&pageSize={_pageSize}&sortField={_sortField}&sortDir={_sortDir}&filter={Uri.EscapeDataString(_filterText)}";
+        var response = await Http.GetFromJsonAsync<RecordListResponse>(url);
+        _records = response?.Records ?? new();
+        _total = response?.Total ?? 0;
+    }
+
+    private void SortBy(string field)
+    {
+        if (_sortField == field)
+            _sortDir = _sortDir == "asc" ? "desc" : "asc";
+        else
+        {
+            _sortField = field;
+            _sortDir = "asc";
+        }
+        _ = LoadRecords();
+    }
+
+    private void OpenDetail(Guid id) => Nav.NavigateTo($"records/{EntityId}/{id}");
+    private void CreateNew() => Nav.NavigateTo($"records/{EntityId}/new");
+
+    private void ToggleSelect(Guid id, bool selected)
+    {
+        if (selected) _selected.Add(id); else _selected.Remove(id);
+    }
+
+    private void ToggleSelectAll(ChangeEventArgs e)
+    {
+        if ((bool)(e.Value ?? false))
+            _selected = _records?.Select(r => r.Id).ToHashSet() ?? new();
+        else
+            _selected.Clear();
+    }
+
+    private async Task DeleteRecord(Guid id)
+    {
+        await Http.DeleteAsync($"api/entities/{EntityId}/records/{id}");
+        await LoadRecords();
+    }
+
+    private async Task DeleteSelected()
+    {
+        foreach (var id in _selected)
+            await Http.DeleteAsync($"api/entities/{EntityId}/records/{id}");
+        _selected.Clear();
+        await LoadRecords();
+    }
+
+    private async Task PrevPage() { _page--; await LoadRecords(); }
+    private async Task NextPage() { _page++; await LoadRecords(); }
+
+    private string GetDisplayValue(Dictionary<string, JsonElement> data, FieldDefinition field)
+    {
+        if (!data.TryGetValue(field.Name, out var val)) return "";
+        return val.ValueKind == JsonValueKind.Null ? "" : val.ToString();
+    }
+
+    // Matches the API response shape
+    private class RecordListResponse
+    {
+        public List<Record> Records { get; set; } = new();
+        public int Total { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+    }
+}
