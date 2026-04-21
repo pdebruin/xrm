@@ -18,8 +18,9 @@ teams, inventory, project tracking, etc.
   multi-tenancy, no cloud dependencies. A single SQLite file holds everything.
 - **Auth-ready, not auth-included** — no built-in user store. The architecture
   must allow plugging in an external identity provider (Entra ID / OIDC) later.
-- **API-first with a UI** — a REST (or GraphQL) API for all operations, plus a
-  Blazor web UI that consumes that API.
+- **API-first with a UI** — a REST API for external consumers (integrations,
+  scripts). The Blazor UI injects application services directly for performance
+  and simplicity (no HTTP roundtrip to self). Both share the same service layer.
 
 ---
 
@@ -27,8 +28,8 @@ teams, inventory, project tracking, etc.
 
 | Layer        | Choice                              |
 |------------- |-------------------------------------|
-| Backend      | C# / .NET 8+ (ASP.NET Core Web API) |
-| Frontend     | Blazor (Server or WASM — TBD)       |
+| Backend      | C# / .NET 10 (ASP.NET Core)          |
+| Frontend     | Blazor Server (interactive)           |
 | Database     | SQLite via EF Core                   |
 | Data model   | EAV-style with JSON value storage    |
 | Auth         | None initially; OIDC-ready           |
