@@ -1,6 +1,8 @@
 @page "/admin/entities/{EntityId:guid}/fields"
 @using Xrm.Server.Models
-@inject HttpClient Http
+@using Xrm.Server.Services
+@inject IEntityService EntityService
+@inject IFieldService FieldService
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
@@ -10,6 +12,11 @@
     <button class="btn btn-link" @onclick="GoBack">← Back to Entities</button>
     <h3>Fields for @(_entityDef?.DisplayName ?? _entityDef?.Name)</h3>
 </div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
 
 <div class="admin-header">
     <span></span>
@@ -147,16 +154,19 @@ else
     private bool _showModal;
     private Guid? _editingId;
     private FieldForm _form = new();
+    private string? _error;
 
     protected override async Task OnInitializedAsync()
     {
-        _entityDef = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{EntityId}");
+        _entityDef = await EntityService.GetByIdAsync(EntityId);
         await LoadFields();
     }
 
     private async Task LoadFields()
     {
-        _fields = await Http.GetFromJsonAsync<List<FieldDefinition>>($"api/entities/{EntityId}/fields");
+        _error = null;
+        try { _fields = await FieldService.GetAllAsync(EntityId); }
+        catch (Exception ex) { _error = ex.Message; }
     }
 
     private void StartCreate()
@@ -190,46 +200,56 @@ else
 
     private async Task SaveField()
     {
-        var optionsJson = (_form.DataType == FieldDataType.Choice || _form.DataType == FieldDataType.MultiChoice)
-            && !string.IsNullOrWhiteSpace(_form.OptionsText)
-            ? System.Text.Json.JsonSerializer.Serialize(
-                _form.OptionsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList())
-            : null;
-
-        var field = new FieldDefinition
+        _error = null;
+        try
         {
-            Id = _editingId ?? Guid.Empty,
-            EntityDefinitionId = EntityId,
-            Name = _form.Name,
-            DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? null : _form.DisplayName,
-            DataType = _form.DataType,
-            IsRequired = _form.IsRequired,
-            SortOrder = _form.SortOrder,
-            DefaultValue = string.IsNullOrWhiteSpace(_form.DefaultValue) ? null : _form.DefaultValue,
-            MaxLength = _form.MaxLength,
-            MinValue = _form.MinValue,
-            MaxValue = _form.MaxValue,
-            Pattern = string.IsNullOrWhiteSpace(_form.Pattern) ? null : _form.Pattern,
-            OptionsJson = optionsJson
-        };
+            var optionsJson = (_form.DataType == FieldDataType.Choice || _form.DataType == FieldDataType.MultiChoice)
+                && !string.IsNullOrWhiteSpace(_form.OptionsText)
+                ? System.Text.Json.JsonSerializer.Serialize(
+                    _form.OptionsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList())
+                : null;
 
-        if (_editingId is not null)
-        {
-            await Http.PutAsJsonAsync($"api/entities/{EntityId}/fields/{_editingId}", field);
+            var field = new FieldDefinition
+            {
+                Id = _editingId ?? Guid.Empty,
+                EntityDefinitionId = EntityId,
+                Name = _form.Name,
+                DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? null : _form.DisplayName,
+                DataType = _form.DataType,
+                IsRequired = _form.IsRequired,
+                SortOrder = _form.SortOrder,
+                DefaultValue = string.IsNullOrWhiteSpace(_form.DefaultValue) ? null : _form.DefaultValue,
+                MaxLength = _form.MaxLength,
+                MinValue = _form.MinValue,
+                MaxValue = _form.MaxValue,
+                Pattern = string.IsNullOrWhiteSpace(_form.Pattern) ? null : _form.Pattern,
+                OptionsJson = optionsJson
+            };
+
+            if (_editingId is not null)
+            {
+                await FieldService.UpdateAsync(EntityId, _editingId.Value, field);
+            }
+            else
+            {
+                await FieldService.CreateAsync(EntityId, field);
+            }
+
+            CloseModal();
+            await LoadFields();
         }
-        else
-        {
-            await Http.PostAsJsonAsync($"api/entities/{EntityId}/fields", field);
-        }
-
-        CloseModal();
-        await LoadFields();
+        catch (Exception ex) { _error = ex.Message; }
     }
 
     private async Task DeleteField(Guid id)
     {
-        await Http.DeleteAsync($"api/entities/{EntityId}/fields/{id}");
-        await LoadFields();
+        _error = null;
+        try
+        {
+            await FieldService.DeleteAsync(EntityId, id);
+            await LoadFields();
+        }
+        catch (Exception ex) { _error = ex.Message; }
     }
 
     private void CloseModal()

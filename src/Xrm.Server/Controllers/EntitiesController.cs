@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Xrm.Server.Data;
 using Xrm.Server.Models;
+using Xrm.Server.Services;
 
 namespace Xrm.Server.Controllers;
 
@@ -9,75 +8,68 @@ namespace Xrm.Server.Controllers;
 [Route("api/[controller]")]
 public class EntitiesController : ControllerBase
 {
-    private readonly XrmDbContext _db;
+    private readonly IEntityService _entities;
+    private readonly IRelationshipService _relationships;
 
-    public EntitiesController(XrmDbContext db) => _db = db;
+    public EntitiesController(IEntityService entities, IRelationshipService relationships)
+    {
+        _entities = entities;
+        _relationships = relationships;
+    }
 
     [HttpGet]
     public async Task<ActionResult<List<EntityDefinition>>> GetAll()
-    {
-        return await _db.EntityDefinitions
-            .OrderBy(e => e.SortOrder)
-            .ThenBy(e => e.Name)
-            .ToListAsync();
-    }
+        => await _entities.GetAllAsync();
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<EntityDefinition>> Get(Guid id)
     {
-        var entity = await _db.EntityDefinitions
-            .Include(e => e.Fields.OrderBy(f => f.SortOrder))
-            .Include(e => e.SourceRelationships)
-            .Include(e => e.TargetRelationships)
-            .FirstOrDefaultAsync(e => e.Id == id);
-
+        var entity = await _entities.GetByIdAsync(id);
         if (entity is null) return NotFound();
         return entity;
+    }
+
+    [HttpGet("{id:guid}/relationships")]
+    public async Task<ActionResult<EntityRelationshipsDto>> GetRelationships(Guid id)
+    {
+        var (source, target) = await _relationships.GetForEntityAsync(id);
+        return new EntityRelationshipsDto { SourceRelationships = source, TargetRelationships = target };
     }
 
     [HttpPost]
     public async Task<ActionResult<EntityDefinition>> Create(EntityDefinition entity)
     {
-        entity.Id = Guid.NewGuid();
-        _db.EntityDefinitions.Add(entity);
-        await _db.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
+        var created = await _entities.CreateAsync(entity);
+        return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, EntityDefinition entity)
     {
-        if (id != entity.Id) return BadRequest();
-        var existing = await _db.EntityDefinitions.FindAsync(id);
-        if (existing is null) return NotFound();
-
-        existing.Name = entity.Name;
-        existing.DisplayName = entity.DisplayName;
-        existing.PluralName = entity.PluralName;
-        existing.Description = entity.Description;
-        existing.Icon = entity.Icon;
-        existing.IsHomeEntity = entity.IsHomeEntity;
-        existing.SortOrder = entity.SortOrder;
-
-        await _db.SaveChangesAsync();
+        var updated = await _entities.UpdateAsync(id, entity);
+        if (updated is null) return NotFound();
         return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var entity = await _db.EntityDefinitions.FindAsync(id);
-        if (entity is null) return NotFound();
-
-        _db.EntityDefinitions.Remove(entity);
-        await _db.SaveChangesAsync();
+        var deleted = await _entities.DeleteAsync(id);
+        if (!deleted) return NotFound();
         return NoContent();
     }
 
     [HttpPost("seed-demo")]
     public async Task<IActionResult> SeedDemo()
     {
-        await DemoDataSeeder.SeedAsync(_db);
+        await _entities.SeedDemoAsync();
         return Ok(new { message = "Demo data loaded" });
     }
 }
+
+public class EntityRelationshipsDto
+{
+    public List<RelationshipDefinition> SourceRelationships { get; set; } = new();
+    public List<RelationshipDefinition> TargetRelationships { get; set; } = new();
+}
+

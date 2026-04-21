@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Xrm.Server.Models;
 
 public class Record
@@ -13,7 +15,10 @@ public class Record
     public DateTime ModifiedAt { get; set; }
     public string ModifiedBy { get; set; } = "system";
 
-    public EntityDefinition EntityDefinition { get; set; } = null!;
+    [JsonIgnore]
+    public EntityDefinition? EntityDefinition { get; set; }
+    [JsonIgnore]
     public ICollection<RecordLink> SourceLinks { get; set; } = new List<RecordLink>();
+    [JsonIgnore]
     public ICollection<RecordLink> TargetLinks { get; set; } = new List<RecordLink>();
 }

@@ -2,11 +2,19 @@
 @page "/records/{EntityId:guid}/{RecordId:guid}"
 @using System.Text.Json
 @using Xrm.Server.Models
-@inject HttpClient Http
+@using Xrm.Server.Services
+@inject IEntityService EntityService
+@inject IRecordService RecordService
+@inject IRelationshipService RelationshipService
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
 <PageTitle>@(_isNew ? "New" : "Edit") @(_entityDef?.DisplayName ?? "Record")</PageTitle>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
 
 @if (_entityDef is null)
 {
@@ -120,7 +128,7 @@ else
         {
             <div class="related-section mb-3">
                 <h5>@(rel.DisplayName ?? rel.Name)</h5>
-                @if (_childRecords.TryGetValue(rel.Id, out var children))
+                @if (_childRecords.TryGetValue(rel.Id, out var children) && children.Any())
                 {
                     <ul class="list-group list-group-flush">
                         @foreach (var child in children)
@@ -147,6 +155,7 @@ else
 
     private bool _isNew => RecordId is null;
     private bool _saving;
+    private string? _error;
     private EntityDefinition? _entityDef;
     private List<FieldDefinition> _fields = new();
     private Dictionary<string, object?> _data = new();
@@ -159,42 +168,40 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        _entityDef = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{EntityId}");
+        _error = null;
+        _entityDef = await EntityService.GetByIdAsync(EntityId);
         _fields = _entityDef?.Fields?.OrderBy(f => f.SortOrder).ToList() ?? new();
 
-        // Determine relationships
-        _parentRelationships = _entityDef?.TargetRelationships?
-            .Where(r => r.RelationshipType == RelationshipType.OneToMany)
-            .ToList() ?? new();
-        _childRelationships = _entityDef?.SourceRelationships?
-            .Where(r => r.RelationshipType == RelationshipType.OneToMany)
-            .ToList() ?? new();
+        // Get relationships for this entity
+        var (sourceRels, targetRels) = await RelationshipService.GetForEntityAsync(EntityId);
+        _parentRelationships = targetRels.Where(r => r.RelationshipType == RelationshipType.OneToMany).ToList();
+        _childRelationships = sourceRels.Where(r => r.RelationshipType == RelationshipType.OneToMany).ToList();
 
         // Load parent options
         foreach (var rel in _parentRelationships)
         {
-            var records = await Http.GetFromJsonAsync<RecordListResponse>($"api/entities/{rel.SourceEntityId}/records?pageSize=100");
-            var sourceEntity = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{rel.SourceEntityId}");
-            var displayField = sourceEntity?.Fields?.OrderBy(f => f.SortOrder).FirstOrDefault()?.Name ?? "Name";
+            var parentEntity = await EntityService.GetByIdAsync(rel.SourceEntityId);
+            var displayField = parentEntity?.Fields?.OrderBy(f => f.SortOrder).FirstOrDefault()?.Name ?? "Name";
+            var parentRecords = await RecordService.GetAllAsync(rel.SourceEntityId, 1, 100);
 
-            _parentOptions[rel.Id] = records?.Records?.Select(r =>
+            _parentOptions[rel.Id] = parentRecords.Records.Select(r =>
             {
                 var d = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(r.DataJson) ?? new();
                 var label = d.TryGetValue(displayField, out var v) ? v.ToString() : r.Id.ToString();
                 return new ParentOption { Id = r.Id, Label = label };
-            }).ToList() ?? new();
+            }).ToList();
         }
 
         if (!_isNew)
         {
-            var record = await Http.GetFromJsonAsync<Record>($"api/entities/{EntityId}/records/{RecordId}");
+            var record = await RecordService.GetByIdAsync(EntityId, RecordId!.Value);
             if (record is not null)
             {
                 _data = JsonSerializer.Deserialize<Dictionary<string, object?>>(record.DataJson) ?? new();
             }
 
-            // Load links to determine parent values and child records
-            var links = await Http.GetFromJsonAsync<List<RecordLinkDto>>($"api/entities/{EntityId}/records/{RecordId}/links") ?? new();
+            // Load links
+            var links = await RecordService.GetLinksAsync(EntityId, RecordId!.Value);
 
             foreach (var rel in _parentRelationships)
             {
@@ -208,12 +215,12 @@ else
                 var children = new List<ChildRecord>();
                 foreach (var cl in childLinks)
                 {
-                    var childRec = await Http.GetFromJsonAsync<Record>($"api/entities/{rel.TargetEntityId}/records/{cl.TargetRecordId}");
+                    var childRec = await RecordService.GetByIdAsync(rel.TargetEntityId, cl.TargetRecordId);
                     if (childRec is not null)
                     {
-                        var d = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(childRec.DataJson) ?? new();
-                        var targetEntity = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{rel.TargetEntityId}");
+                        var targetEntity = await EntityService.GetByIdAsync(rel.TargetEntityId);
                         var displayField = targetEntity?.Fields?.OrderBy(f => f.SortOrder).FirstOrDefault()?.Name ?? "Name";
+                        var d = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(childRec.DataJson) ?? new();
                         var label = d.TryGetValue(displayField, out var v) ? v.ToString() : childRec.Id.ToString();
                         children.Add(new ChildRecord { Id = childRec.Id, EntityId = rel.TargetEntityId, Label = label });
                     }
@@ -261,45 +268,36 @@ else
     private async Task Save()
     {
         _saving = true;
-        var json = JsonSerializer.Serialize(_data);
-        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-        if (_isNew)
+        _error = null;
+        try
         {
-            var response = await Http.PostAsync($"api/entities/{EntityId}/records", content);
-            if (response.IsSuccessStatusCode)
+            var json = JsonSerializer.Serialize(_data);
+
+            if (_isNew)
             {
-                var created = await response.Content.ReadFromJsonAsync<Record>();
-                // TODO: handle parent links for new records
+                var created = await RecordService.CreateAsync(EntityId, json);
+                // Handle parent links for new record
+                foreach (var (relId, parentId) in _parentValues)
+                {
+                    if (Guid.TryParse(parentId, out var pid))
+                    {
+                        await RecordService.CreateLinkAsync(pid, relId, created.Id);
+                    }
+                }
+                Nav.NavigateTo($"records/{EntityId}");
+            }
+            else
+            {
+                await RecordService.UpdateAsync(EntityId, RecordId!.Value, json);
                 Nav.NavigateTo($"records/{EntityId}");
             }
         }
-        else
-        {
-            await Http.PutAsync($"api/entities/{EntityId}/records/{RecordId}", content);
-            Nav.NavigateTo($"records/{EntityId}");
-        }
-        _saving = false;
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
     }
 
     private void GoBack() => Nav.NavigateTo($"records/{EntityId}");
     private void NavigateToChild(Guid entityId, Guid recordId) => Nav.NavigateTo($"records/{entityId}/{recordId}");
-
-    private class RecordListResponse
-    {
-        public List<Record> Records { get; set; } = new();
-        public int Total { get; set; }
-    }
-
-    private class RecordLinkDto
-    {
-        public Guid Id { get; set; }
-        public Guid RelationshipId { get; set; }
-        public string RelationshipName { get; set; } = "";
-        public Guid SourceRecordId { get; set; }
-        public Guid TargetRecordId { get; set; }
-        public string Direction { get; set; } = "";
-    }
 
     private class ParentOption { public Guid Id { get; set; } public string Label { get; set; } = ""; }
     private class ChildRecord { public Guid Id { get; set; } public Guid EntityId { get; set; } public string Label { get; set; } = ""; }

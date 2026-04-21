@@ -1,18 +1,6 @@
+using System.Text.Json.Serialization;
+
 namespace Xrm.Server.Models;
-
-public enum RelationshipType
-{
-    OneToMany,
-    ManyToOne,
-    ManyToMany
-}
-
-public enum CascadeBehavior
-{
-    None,
-    RemoveLink,
-    Cascade
-}
 
 public class RelationshipDefinition
 {
@@ -29,7 +17,10 @@ public class RelationshipDefinition
     public DateTime ModifiedAt { get; set; }
     public string ModifiedBy { get; set; } = "system";
 
-    public EntityDefinition SourceEntity { get; set; } = null!;
-    public EntityDefinition TargetEntity { get; set; } = null!;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public EntityDefinition? SourceEntity { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public EntityDefinition? TargetEntity { get; set; }
+    [JsonIgnore]
     public ICollection<RecordLink> RecordLinks { get; set; } = new List<RecordLink>();
 }

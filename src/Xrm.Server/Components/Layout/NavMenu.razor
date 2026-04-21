@@ -1,5 +1,6 @@
 @using Xrm.Server.Models
-@inject HttpClient Http
+@using Xrm.Server.Services
+@inject IEntityService EntityService
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -54,7 +55,7 @@
     {
         try
         {
-            _entities = await Http.GetFromJsonAsync<List<EntityDefinition>>("api/entities");
+            _entities = await EntityService.GetAllAsync();
         }
         catch
         {

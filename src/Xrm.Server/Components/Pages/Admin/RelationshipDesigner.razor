@@ -1,6 +1,8 @@
 @page "/admin/relationships"
 @using Xrm.Server.Models
-@inject HttpClient Http
+@using Xrm.Server.Services
+@inject IEntityService EntityService
+@inject IRelationshipService RelationshipService
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
@@ -10,6 +12,11 @@
     <button class="btn btn-link" @onclick="GoBack">← Back to Entities</button>
     <h3>Relationships</h3>
 </div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
 
 <div class="admin-header">
     <span></span>
@@ -135,16 +142,19 @@ else
     private bool _showModal;
     private Guid? _editingId;
     private RelForm _form = new();
+    private string? _error;
 
     protected override async Task OnInitializedAsync()
     {
-        _entities = await Http.GetFromJsonAsync<List<EntityDefinition>>("api/entities");
+        _entities = await EntityService.GetAllAsync();
         await LoadRelationships();
     }
 
     private async Task LoadRelationships()
     {
-        _relationships = await Http.GetFromJsonAsync<List<RelationshipDefinition>>("api/relationships");
+        _error = null;
+        try { _relationships = await RelationshipService.GetAllAsync(); }
+        catch (Exception ex) { _error = ex.Message; }
     }
 
     private void StartCreate()
@@ -171,38 +181,51 @@ else
 
     private async Task SaveRel()
     {
+        _error = null;
         if (!Guid.TryParse(_form.SourceEntityId, out var sourceId) ||
             !Guid.TryParse(_form.TargetEntityId, out var targetId))
+        {
+            _error = "Please select both source and target entities.";
             return;
-
-        var rel = new RelationshipDefinition
-        {
-            Id = _editingId ?? Guid.Empty,
-            Name = _form.Name,
-            DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? null : _form.DisplayName,
-            SourceEntityId = sourceId,
-            TargetEntityId = targetId,
-            RelationshipType = _form.RelationshipType,
-            CascadeBehavior = _form.CascadeBehavior
-        };
-
-        if (_editingId is not null)
-        {
-            await Http.PutAsJsonAsync($"api/relationships/{_editingId}", rel);
-        }
-        else
-        {
-            await Http.PostAsJsonAsync("api/relationships", rel);
         }
 
-        CloseModal();
-        await LoadRelationships();
+        try
+        {
+            var rel = new RelationshipDefinition
+            {
+                Id = _editingId ?? Guid.Empty,
+                Name = _form.Name,
+                DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? null : _form.DisplayName,
+                SourceEntityId = sourceId,
+                TargetEntityId = targetId,
+                RelationshipType = _form.RelationshipType,
+                CascadeBehavior = _form.CascadeBehavior
+            };
+
+            if (_editingId is not null)
+            {
+                await RelationshipService.UpdateAsync(_editingId.Value, rel);
+            }
+            else
+            {
+                await RelationshipService.CreateAsync(rel);
+            }
+
+            CloseModal();
+            await LoadRelationships();
+        }
+        catch (Exception ex) { _error = ex.Message; }
     }
 
     private async Task DeleteRel(Guid id)
     {
-        await Http.DeleteAsync($"api/relationships/{id}");
-        await LoadRelationships();
+        _error = null;
+        try
+        {
+            await RelationshipService.DeleteAsync(id);
+            await LoadRelationships();
+        }
+        catch (Exception ex) { _error = ex.Message; }
     }
 
     private void CloseModal()

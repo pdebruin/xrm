@@ -1,7 +1,9 @@
 @page "/records/{EntityId:guid}"
 @using System.Text.Json
 @using Xrm.Server.Models
-@inject HttpClient Http
+@using Xrm.Server.Services
+@inject IEntityService EntityService
+@inject IRecordService RecordService
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
@@ -101,17 +103,16 @@ else
     {
         _page = 1;
         _selected.Clear();
-        _entityDef = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{EntityId}");
+        _entityDef = await EntityService.GetByIdAsync(EntityId);
         _fields = _entityDef?.Fields?.ToList() ?? new();
         await LoadRecords();
     }
 
     private async Task LoadRecords()
     {
-        var url = $"api/entities/{EntityId}/records?page={_page}&pageSize={_pageSize}&sortField={_sortField}&sortDir={_sortDir}&filter={Uri.EscapeDataString(_filterText)}";
-        var response = await Http.GetFromJsonAsync<RecordListResponse>(url);
-        _records = response?.Records ?? new();
-        _total = response?.Total ?? 0;
+        var result = await RecordService.GetAllAsync(EntityId, _page, _pageSize, _sortField, _sortDir, _filterText);
+        _records = result.Records;
+        _total = result.Total;
     }
 
     private void SortBy(string field)
@@ -144,14 +145,14 @@ else
 
     private async Task DeleteRecord(Guid id)
     {
-        await Http.DeleteAsync($"api/entities/{EntityId}/records/{id}");
+        await RecordService.DeleteAsync(EntityId, id);
         await LoadRecords();
     }
 
     private async Task DeleteSelected()
     {
         foreach (var id in _selected)
-            await Http.DeleteAsync($"api/entities/{EntityId}/records/{id}");
+            await RecordService.DeleteAsync(EntityId, id);
         _selected.Clear();
         await LoadRecords();
     }
@@ -163,14 +164,5 @@ else
     {
         if (!data.TryGetValue(field.Name, out var val)) return "";
         return val.ValueKind == JsonValueKind.Null ? "" : val.ToString();
-    }
-
-    // Matches the API response shape
-    private class RecordListResponse
-    {
-        public List<Record> Records { get; set; } = new();
-        public int Total { get; set; }
-        public int Page { get; set; }
-        public int PageSize { get; set; }
     }
 }

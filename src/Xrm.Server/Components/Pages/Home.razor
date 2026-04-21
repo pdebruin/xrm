@@ -1,7 +1,9 @@
 ﻿@page "/"
 @using Xrm.Server.Models
-@inject HttpClient Http
+@using Xrm.Server.Services
+@inject IEntityService EntityService
 @inject NavigationManager Nav
+@rendermode InteractiveServer
 
 <PageTitle>XRM</PageTitle>
 
@@ -36,7 +38,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _entities = await Http.GetFromJsonAsync<List<EntityDefinition>>("api/entities");
+        _entities = await EntityService.GetAllAsync();
 
         if (_entities?.Count > 0)
         {
@@ -48,7 +50,7 @@
     private async Task LoadDemo()
     {
         _loading = true;
-        await Http.PostAsync("api/entities/seed-demo", null);
+        await EntityService.SeedDemoAsync();
         Nav.NavigateTo("/", forceLoad: true);
     }
 }

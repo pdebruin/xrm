@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Xrm.Server.Models;
 
 public class EntityDefinition
@@ -17,7 +19,11 @@ public class EntityDefinition
     public string ModifiedBy { get; set; } = "system";
 
     public ICollection<FieldDefinition> Fields { get; set; } = new List<FieldDefinition>();
+
+    [JsonIgnore]
     public ICollection<RelationshipDefinition> SourceRelationships { get; set; } = new List<RelationshipDefinition>();
+    [JsonIgnore]
     public ICollection<RelationshipDefinition> TargetRelationships { get; set; } = new List<RelationshipDefinition>();
+    [JsonIgnore]
     public ICollection<Record> Records { get; set; } = new List<Record>();
 }

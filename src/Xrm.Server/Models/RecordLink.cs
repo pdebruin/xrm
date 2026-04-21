@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Xrm.Server.Models;
 
 public class RecordLink
@@ -10,7 +12,10 @@ public class RecordLink
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = "system";
 
-    public RelationshipDefinition RelationshipDefinition { get; set; } = null!;
-    public Record SourceRecord { get; set; } = null!;
-    public Record TargetRecord { get; set; } = null!;
+    [JsonIgnore]
+    public RelationshipDefinition? RelationshipDefinition { get; set; }
+    [JsonIgnore]
+    public Record? SourceRecord { get; set; }
+    [JsonIgnore]
+    public Record? TargetRecord { get; set; }
 }

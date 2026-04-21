@@ -1,20 +1,6 @@
-namespace Xrm.Server.Models;
+using System.Text.Json.Serialization;
 
-public enum FieldDataType
-{
-    Text,
-    Number,
-    Decimal,
-    Boolean,
-    Date,
-    DateTime,
-    Choice,
-    MultiChoice,
-    RichText,
-    Email,
-    Phone,
-    Url
-}
+namespace Xrm.Server.Models;
 
 public class FieldDefinition
 {
@@ -41,5 +27,6 @@ public class FieldDefinition
     public DateTime ModifiedAt { get; set; }
     public string ModifiedBy { get; set; } = "system";
 
-    public EntityDefinition EntityDefinition { get; set; } = null!;
+    [JsonIgnore]
+    public EntityDefinition? EntityDefinition { get; set; }
 }
