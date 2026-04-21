@@ -119,30 +119,114 @@ else
         </div>
     </div>
 
-    @* Child relationships *@
+    @* Child relationships — full grid with CRUD *@
     @if (!_isNew && _childRelationships.Any())
     {
         <hr />
-        <h4>Related Records</h4>
         @foreach (var rel in _childRelationships)
         {
-            <div class="related-section mb-3">
-                <h5>@(rel.DisplayName ?? rel.Name)</h5>
-                @if (_childRecords.TryGetValue(rel.Id, out var children) && children.Any())
+            var section = _childSections.GetValueOrDefault(rel.Id);
+            if (section is null) continue;
+
+            <div class="child-section mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">@(section.Entity.PluralName ?? section.Entity.DisplayName ?? section.Entity.Name)</h5>
+                    <button class="btn btn-sm btn-primary" @onclick="() => StartAddChild(rel.Id)">+ Add</button>
+                </div>
+
+                @if (section.Records.Any())
                 {
-                    <ul class="list-group list-group-flush">
-                        @foreach (var child in children)
-                        {
-                            <li class="list-group-item list-group-item-action" 
-                                @onclick="() => NavigateToChild(child.EntityId, child.Id)">
-                                @child.Label
-                            </li>
-                        }
-                    </ul>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    @foreach (var f in section.Fields)
+                                    {
+                                        <th>@(f.DisplayName ?? f.Name)</th>
+                                    }
+                                    <th style="width:100px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var rec in section.Records)
+                                {
+                                    <tr>
+                                        @foreach (var f in section.Fields)
+                                        {
+                                            <td>@GetChildCellValue(rec.DataJson, f.Name)</td>
+                                        }
+                                        <td class="text-end text-nowrap">
+                                            <button class="btn btn-sm btn-outline-primary me-1" title="Edit"
+                                                    @onclick="() => StartEditChild(rel.Id, rec)">✎</button>
+                                            <button class="btn btn-sm btn-outline-danger" title="Delete"
+                                                    @onclick="() => DeleteChild(rel.Id, rec.Id)">✕</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 }
                 else
                 {
-                    <p class="text-muted">None</p>
+                    <p class="text-muted">No records yet.</p>
+                }
+
+                @* Inline add/edit form *@
+                @if (_editingChildRelId == rel.Id)
+                {
+                    <div class="card card-body bg-light mt-2">
+                        <h6>@(_editingChildId is null ? "Add" : "Edit") @(section.Entity.DisplayName ?? section.Entity.Name)</h6>
+                        @foreach (var f in section.Fields)
+                        {
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm">@(f.DisplayName ?? f.Name)</label>
+                                @switch (f.DataType)
+                                {
+                                    case FieldDataType.Boolean:
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input"
+                                                   checked="@GetChildEditBool(f.Name)"
+                                                   @onchange="(e) => SetChildEditValue(f.Name, e.Value)" />
+                                        </div>
+                                        break;
+
+                                    case FieldDataType.Number:
+                                    case FieldDataType.Decimal:
+                                        <input type="number" class="form-control form-control-sm"
+                                               step="@(f.DataType == FieldDataType.Decimal ? "0.01" : "1")"
+                                               value="@GetChildEditValue(f.Name)"
+                                               @onchange="(e) => SetChildEditValue(f.Name, e.Value)" />
+                                        break;
+
+                                    case FieldDataType.Choice:
+                                        <select class="form-select form-select-sm" value="@GetChildEditValue(f.Name)"
+                                                @onchange="(e) => SetChildEditValue(f.Name, e.Value)">
+                                            <option value="">-- Select --</option>
+                                            @foreach (var opt in GetOptions(f))
+                                            {
+                                                <option value="@opt">@opt</option>
+                                            }
+                                        </select>
+                                        break;
+
+                                    default:
+                                        <input type="text" class="form-control form-control-sm"
+                                               value="@GetChildEditValue(f.Name)"
+                                               @onchange="(e) => SetChildEditValue(f.Name, e.Value)" />
+                                        break;
+                                }
+                            </div>
+                        }
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-primary me-1" @onclick="() => SaveChild(rel.Id)">Save</button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="CancelChildEdit">Cancel</button>
+                        </div>
+                        @if (_childEditError is not null)
+                        {
+                            <div class="alert alert-danger mt-2 py-1 px-2 small">@_childEditError</div>
+                        }
+                    </div>
                 }
             </div>
         }
@@ -164,7 +248,13 @@ else
     private List<RelationshipDefinition> _childRelationships = new();
     private Dictionary<Guid, List<ParentOption>> _parentOptions = new();
     private Dictionary<Guid, string?> _parentValues = new();
-    private Dictionary<Guid, List<ChildRecord>> _childRecords = new();
+    private Dictionary<Guid, ChildSection> _childSections = new();
+
+    // Child inline editing state
+    private Guid? _editingChildRelId;
+    private Guid? _editingChildId;
+    private Dictionary<string, object?> _childEditData = new();
+    private string? _childEditError;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -211,21 +301,7 @@ else
 
             foreach (var rel in _childRelationships)
             {
-                var childLinks = links.Where(l => l.RelationshipId == rel.Id && l.Direction == "outgoing").ToList();
-                var children = new List<ChildRecord>();
-                foreach (var cl in childLinks)
-                {
-                    var childRec = await RecordService.GetByIdAsync(rel.TargetEntityId, cl.TargetRecordId);
-                    if (childRec is not null)
-                    {
-                        var targetEntity = await EntityService.GetByIdAsync(rel.TargetEntityId);
-                        var displayField = targetEntity?.Fields?.OrderBy(f => f.SortOrder).FirstOrDefault()?.Name ?? "Name";
-                        var d = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(childRec.DataJson) ?? new();
-                        var label = d.TryGetValue(displayField, out var v) ? v.ToString() : childRec.Id.ToString();
-                        children.Add(new ChildRecord { Id = childRec.Id, EntityId = rel.TargetEntityId, Label = label });
-                    }
-                }
-                _childRecords[rel.Id] = children;
+                await LoadChildSection(rel);
             }
         }
     }
@@ -297,8 +373,123 @@ else
     }
 
     private void GoBack() => Nav.NavigateTo($"records/{EntityId}");
-    private void NavigateToChild(Guid entityId, Guid recordId) => Nav.NavigateTo($"records/{entityId}/{recordId}");
+
+    private string GetChildCellValue(string dataJson, string fieldName)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(dataJson);
+            if (doc.RootElement.TryGetProperty(fieldName, out var val))
+                return val.ValueKind == JsonValueKind.Null ? "" : val.ToString();
+        }
+        catch { }
+        return "";
+    }
+
+    private async Task LoadChildSection(RelationshipDefinition rel)
+    {
+        var entity = await EntityService.GetByIdAsync(rel.TargetEntityId);
+        var fields = entity?.Fields?.OrderBy(f => f.SortOrder).ToList() ?? new();
+        var links = await RecordService.GetLinksAsync(EntityId, RecordId!.Value);
+        var childLinks = links.Where(l => l.RelationshipId == rel.Id && l.Direction == "outgoing").ToList();
+        var records = new List<Record>();
+        foreach (var cl in childLinks)
+        {
+            var rec = await RecordService.GetByIdAsync(rel.TargetEntityId, cl.TargetRecordId);
+            if (rec is not null) records.Add(rec);
+        }
+        _childSections[rel.Id] = new ChildSection
+        {
+            Entity = entity!,
+            Fields = fields,
+            Records = records
+        };
+    }
+
+    private void StartAddChild(Guid relId)
+    {
+        _editingChildRelId = relId;
+        _editingChildId = null;
+        _childEditData = new();
+        _childEditError = null;
+    }
+
+    private void StartEditChild(Guid relId, Record rec)
+    {
+        _editingChildRelId = relId;
+        _editingChildId = rec.Id;
+        _childEditData = JsonSerializer.Deserialize<Dictionary<string, object?>>(rec.DataJson) ?? new();
+        _childEditError = null;
+    }
+
+    private void CancelChildEdit()
+    {
+        _editingChildRelId = null;
+        _editingChildId = null;
+        _childEditData = new();
+        _childEditError = null;
+    }
+
+    private string GetChildEditValue(string fieldName)
+    {
+        if (_childEditData.TryGetValue(fieldName, out var val) && val is not null)
+        {
+            if (val is JsonElement je) return je.ValueKind == JsonValueKind.Null ? "" : je.ToString();
+            return val.ToString() ?? "";
+        }
+        return "";
+    }
+
+    private bool GetChildEditBool(string fieldName) =>
+        GetChildEditValue(fieldName).Equals("true", StringComparison.OrdinalIgnoreCase);
+
+    private void SetChildEditValue(string fieldName, object? value) => _childEditData[fieldName] = value;
+
+    private async Task SaveChild(Guid relId)
+    {
+        _childEditError = null;
+        try
+        {
+            var rel = _childRelationships.First(r => r.Id == relId);
+            var json = JsonSerializer.Serialize(_childEditData);
+
+            if (_editingChildId is null)
+            {
+                // Create new child and link to parent
+                var created = await RecordService.CreateAsync(rel.TargetEntityId, json);
+                await RecordService.CreateLinkAsync(RecordId!.Value, relId, created.Id);
+            }
+            else
+            {
+                await RecordService.UpdateAsync(rel.TargetEntityId, _editingChildId.Value, json);
+            }
+
+            CancelChildEdit();
+            await LoadChildSection(rel);
+        }
+        catch (Exception ex) { _childEditError = ex.Message; }
+    }
+
+    private async Task DeleteChild(Guid relId, Guid childRecordId)
+    {
+        try
+        {
+            var rel = _childRelationships.First(r => r.Id == relId);
+            // Delete the link first, then the record
+            var links = await RecordService.GetLinksAsync(EntityId, RecordId!.Value);
+            var link = links.FirstOrDefault(l => l.RelationshipId == relId && l.TargetRecordId == childRecordId);
+            if (link is not null) await RecordService.DeleteLinkAsync(link.Id);
+            await RecordService.DeleteAsync(rel.TargetEntityId, childRecordId);
+            await LoadChildSection(rel);
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
 
     private class ParentOption { public Guid Id { get; set; } public string Label { get; set; } = ""; }
-    private class ChildRecord { public Guid Id { get; set; } public Guid EntityId { get; set; } public string Label { get; set; } = ""; }
+    private class ChildSection
+    {
+        public EntityDefinition Entity { get; set; } = null!;
+        public List<FieldDefinition> Fields { get; set; } = new();
+        public List<Record> Records { get; set; } = new();
+    }
 }
