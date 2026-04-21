@@ -80,8 +80,7 @@ database foreign keys.
 ### 4. Records (Runtime)
 
 A **Record** is an instance of an entity definition. Records store their field
-values in an EAV-style table where each row holds one field value (or in a
-JSON column — TBD during design).
+values in a JSON column (`DataJson`) on the record row.
 
 ### 5. Record Links (Runtime)
 
@@ -176,7 +175,7 @@ It is a simple join row: `(relationship_id, source_record_id, target_record_id)`
 | Primary         | `#5C8C4F` | Leaf green         |
 | Secondary       | `#93A680` | Muted sage         |
 | Background/Neutral | `#D9CBBF` | Warm beige      |
-- Component library: TBD (candidates: MudBlazor, Fluent UI Blazor, Radzen).
+- Component library: plain Blazor (no third-party component library).
 - Browser tab title: always shows "XRM" (no per-page titles).
 - Favicon: green circle with white "XRM" text, biophilic green (#045929).
 
@@ -194,14 +193,11 @@ It is a simple join row: `(relationship_id, source_record_id, target_record_id)`
 
 ---
 
-## Open Questions
+## Design Decisions
 
-1. **Blazor Server vs. Blazor WASM?** Server is simpler (no separate hosting),
-   WASM gives offline potential. Leaning Server for simplicity.
-2. **EAV rows vs. JSON column for field values?** EAV is more queryable; JSON
-   is simpler to read/write. Could start with JSON and add EAV indexes later.
-3. **Versioning of schema changes?** Should we track a history of entity/field
-   definition changes, or is current-state-only enough for v1?
+1. **Blazor Server** — simpler than WASM, no separate hosting needed.
+2. **JSON column for field values** — simpler to read/write than EAV rows; indexable later if needed.
+3. **Current-state schema only** — no versioning of entity/field definitions in v1.
 
 ---
 
