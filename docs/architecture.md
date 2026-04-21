@@ -67,7 +67,10 @@ share the same business logic:
 
 **Service layer (not controllers-only)**
 - Controllers are thin wrappers for external REST consumers
-- Blazor pages inject services directly (no HTTP overhead)
+- Blazor pages inject services directly — in-process, common pattern, fast (no HTTP overhead)
+- An alternative would be to have Blazor consume the REST API ("dogfooding"), which ensures
+  one code path and catches API issues early. We chose direct injection because Blazor Server
+  runs in the same process, making HTTP calls to itself unnecessary overhead.
 - Single source of truth for validation and business rules
 
 ### Data Model
