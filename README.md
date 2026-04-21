@@ -9,8 +9,16 @@ XRM is an experiment to test that claim: can we build a usable, self-hosted
 platform from requirements to working app in a single AI-assisted session?
 
 The result is a **meta-CRM** — a platform where you define your own entities,
-fields, and relationships, then manage records through a generated UI. It could
-be a CRM, a sports team tracker, an inventory system, or anything else.
+fields, and relationships, then manage records through a generated UI. Think
+"web-based MS Access" — you design your tables and relationships, then the UI is
+generated for you. The difference is it's a real web app with an API.
+
+It could be a CRM, a sports team tracker, an inventory system, or anything else.
+
+Whether this proves "SaaS is dead" — well, we built the *scaffolding* fast.
+What takes time is the polish: auth, permissions, proper error handling, scale,
+and the thousand edge cases real users find. But as a proof of concept for
+AI-assisted development speed, it's pretty compelling.
 
 ## How
 
@@ -26,7 +34,7 @@ This project was built almost entirely through conversation with GitHub Copilot
 4. **Peer review** — AI-driven code review identifying 13 issues across
    critical/important/minor severity; critical and top important items fixed
 5. **Testing** — manual [test plan](tests.md) mapped to requirements, plus
-   40 automated tests (unit + API integration)
+   71 automated tests (unit + API integration) with CI via GitHub Actions
 6. **Documentation** — user guide, technical docs, this README
 
 Each step was a conversation turn. The AI wrote the code, ran builds and tests,
