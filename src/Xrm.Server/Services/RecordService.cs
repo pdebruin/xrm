@@ -55,7 +55,7 @@ public class RecordService : IRecordService
         ).ToList();
     }
 
-    private static string ExtractSortKey(string dataJson, string fieldName)
+    private static IComparable ExtractSortKey(string dataJson, string fieldName)
     {
         try
         {
@@ -64,7 +64,9 @@ public class RecordService : IRecordService
             {
                 return val.ValueKind switch
                 {
-                    System.Text.Json.JsonValueKind.Number => val.GetDouble().ToString("F10"),
+                    System.Text.Json.JsonValueKind.Number => val.GetDouble(),
+                    System.Text.Json.JsonValueKind.True => 1,
+                    System.Text.Json.JsonValueKind.False => 0,
                     System.Text.Json.JsonValueKind.Null => "",
                     _ => val.ToString() ?? ""
                 };
@@ -84,6 +86,8 @@ public class RecordService : IRecordService
     public async Task<Record> CreateAsync(Guid entityId, string dataJson)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
+        await ValidateRecordData(db, entityId, dataJson);
+
         var record = new Record
         {
             Id = Guid.NewGuid(),
@@ -102,9 +106,75 @@ public class RecordService : IRecordService
             .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId);
         if (record is null) return false;
 
+        await ValidateRecordData(db, entityId, dataJson);
         record.DataJson = dataJson;
         await db.SaveChangesAsync();
         return true;
+    }
+
+    private static async Task ValidateRecordData(XrmDbContext db, Guid entityId, string dataJson)
+    {
+        var fields = await db.FieldDefinitions
+            .Where(f => f.EntityDefinitionId == entityId)
+            .ToListAsync();
+
+        if (fields.Count == 0) return;
+
+        Dictionary<string, System.Text.Json.JsonElement> data;
+        try
+        {
+            data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(dataJson) ?? new();
+        }
+        catch
+        {
+            throw new InvalidOperationException("Invalid JSON data");
+        }
+
+        var errors = new List<string>();
+
+        foreach (var field in fields)
+        {
+            var hasValue = data.TryGetValue(field.Name, out var val)
+                && val.ValueKind != System.Text.Json.JsonValueKind.Null
+                && !(val.ValueKind == System.Text.Json.JsonValueKind.String && string.IsNullOrWhiteSpace(val.GetString()));
+
+            if (field.IsRequired && !hasValue)
+            {
+                errors.Add($"'{field.DisplayName ?? field.Name}' is required");
+                continue;
+            }
+
+            if (!hasValue) continue;
+
+            var strVal = val.ToString();
+
+            if (field.MaxLength.HasValue && strVal.Length > field.MaxLength.Value)
+                errors.Add($"'{field.DisplayName ?? field.Name}' exceeds max length of {field.MaxLength.Value}");
+
+            if ((field.MinValue.HasValue || field.MaxValue.HasValue) && double.TryParse(strVal, out var numVal))
+            {
+                if (field.MinValue.HasValue && numVal < field.MinValue.Value)
+                    errors.Add($"'{field.DisplayName ?? field.Name}' must be ≥ {field.MinValue.Value}");
+                if (field.MaxValue.HasValue && numVal > field.MaxValue.Value)
+                    errors.Add($"'{field.DisplayName ?? field.Name}' must be ≤ {field.MaxValue.Value}");
+            }
+
+            if (!string.IsNullOrEmpty(field.Pattern))
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(strVal, field.Pattern))
+                    errors.Add($"'{field.DisplayName ?? field.Name}' does not match required pattern");
+            }
+
+            if (field.DataType == FieldDataType.Choice && !string.IsNullOrEmpty(field.OptionsJson))
+            {
+                var options = System.Text.Json.JsonSerializer.Deserialize<List<string>>(field.OptionsJson) ?? new();
+                if (options.Count > 0 && !options.Contains(strVal))
+                    errors.Add($"'{field.DisplayName ?? field.Name}' must be one of: {string.Join(", ", options)}");
+            }
+        }
+
+        if (errors.Count > 0)
+            throw new InvalidOperationException(string.Join("; ", errors));
     }
 
     public async Task<bool> DeleteAsync(Guid entityId, Guid id)
@@ -144,6 +214,23 @@ public class RecordService : IRecordService
     public async Task<RecordLink> CreateLinkAsync(Guid recordId, Guid relationshipId, Guid targetRecordId)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
+
+        // Validate relationship exists
+        var rel = await db.RelationshipDefinitions.FindAsync(relationshipId)
+            ?? throw new InvalidOperationException($"Relationship {relationshipId} not found");
+
+        // Validate source record belongs to the relationship's source entity
+        var sourceRecord = await db.Records.FirstOrDefaultAsync(r => r.Id == recordId)
+            ?? throw new InvalidOperationException($"Source record {recordId} not found");
+        if (sourceRecord.EntityDefinitionId != rel.SourceEntityId)
+            throw new InvalidOperationException($"Source record does not belong to entity {rel.SourceEntityId}");
+
+        // Validate target record belongs to the relationship's target entity
+        var targetRecord = await db.Records.FirstOrDefaultAsync(r => r.Id == targetRecordId)
+            ?? throw new InvalidOperationException($"Target record {targetRecordId} not found");
+        if (targetRecord.EntityDefinitionId != rel.TargetEntityId)
+            throw new InvalidOperationException($"Target record does not belong to entity {rel.TargetEntityId}");
+
         var link = new RecordLink
         {
             Id = Guid.NewGuid(),

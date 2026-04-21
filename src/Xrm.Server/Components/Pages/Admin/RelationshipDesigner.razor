@@ -110,20 +110,17 @@ else
                     <div class="mb-3">
                         <label class="form-label">Relationship Type</label>
                         <select class="form-select" @bind="_form.RelationshipType">
-                            @foreach (var rt in Enum.GetValues<RelationshipType>())
-                            {
-                                <option value="@rt">@rt</option>
-                            }
+                            <option value="@RelationshipType.OneToMany">OneToMany</option>
                         </select>
+                        <small class="text-muted">ManyToMany support planned for a future release.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Cascade on Delete</label>
                         <select class="form-select" @bind="_form.CascadeBehavior">
-                            @foreach (var cb in Enum.GetValues<CascadeBehavior>())
-                            {
-                                <option value="@cb">@cb</option>
-                            }
+                            <option value="@CascadeBehavior.None">None</option>
+                            <option value="@CascadeBehavior.RemoveLink">RemoveLink</option>
                         </select>
+                        <small class="text-muted">Cascade delete planned for a future release.</small>
                     </div>
                 </div>
                 <div class="modal-footer">

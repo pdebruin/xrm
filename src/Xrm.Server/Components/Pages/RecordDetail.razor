@@ -255,6 +255,8 @@ else
     private List<RelationshipDefinition> _childRelationships = new();
     private Dictionary<Guid, List<ParentOption>> _parentOptions = new();
     private Dictionary<Guid, string?> _parentValues = new();
+    private Dictionary<Guid, string?> _originalParentValues = new();
+    private Dictionary<Guid, Guid?> _parentLinkIds = new();
     private Dictionary<Guid, ChildSection> _childSections = new();
 
     // Child inline editing state
@@ -304,6 +306,8 @@ else
             {
                 var link = links.FirstOrDefault(l => l.RelationshipId == rel.Id && l.Direction == "incoming");
                 _parentValues[rel.Id] = link?.SourceRecordId.ToString();
+                _originalParentValues[rel.Id] = link?.SourceRecordId.ToString();
+                _parentLinkIds[rel.Id] = link?.Id;
             }
 
             foreach (var rel in _childRelationships)
@@ -359,7 +363,6 @@ else
             if (_isNew)
             {
                 var created = await RecordService.CreateAsync(EntityId, json);
-                // Handle parent links for new record
                 foreach (var (relId, parentId) in _parentValues)
                 {
                     if (Guid.TryParse(parentId, out var pid))
@@ -372,11 +375,35 @@ else
             else
             {
                 await RecordService.UpdateAsync(EntityId, RecordId!.Value, json);
+                await SaveParentLinks();
                 Nav.NavigateTo($"records/{EntityId}");
             }
         }
         catch (Exception ex) { _error = ex.Message; }
         finally { _saving = false; }
+    }
+
+    private async Task SaveParentLinks()
+    {
+        foreach (var rel in _parentRelationships)
+        {
+            var oldVal = _originalParentValues.GetValueOrDefault(rel.Id);
+            var newVal = _parentValues.GetValueOrDefault(rel.Id);
+
+            if (oldVal == newVal) continue;
+
+            // Remove existing link if there was one
+            if (_parentLinkIds.TryGetValue(rel.Id, out var linkId) && linkId.HasValue)
+            {
+                await RecordService.DeleteLinkAsync(linkId.Value);
+            }
+
+            // Create new link if a parent is selected
+            if (Guid.TryParse(newVal, out var newParentId))
+            {
+                await RecordService.CreateLinkAsync(newParentId, rel.Id, RecordId!.Value);
+            }
+        }
     }
 
     private void GoBack() => Nav.NavigateTo($"records/{EntityId}");

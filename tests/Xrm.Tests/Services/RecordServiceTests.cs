@@ -188,4 +188,136 @@ public class RecordServiceTests : ServiceTestBase
         var links = await recSvc.GetLinksAsync(a.Id, recA.Id);
         Assert.Empty(links);
     }
+
+    [Fact]
+    public async Task CreateLink_InvalidRelationship_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var a = await entitySvc.CreateAsync(new EntityDefinition { Name = "X" });
+
+        var recSvc = CreateRecordService();
+        var recA = await recSvc.CreateAsync(a.Id, """{"Name":"X1"}""");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateLinkAsync(recA.Id, Guid.NewGuid(), Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task CreateLink_WrongEntityForSource_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var a = await entitySvc.CreateAsync(new EntityDefinition { Name = "LinkA" });
+        var b = await entitySvc.CreateAsync(new EntityDefinition { Name = "LinkB" });
+        var c = await entitySvc.CreateAsync(new EntityDefinition { Name = "LinkC" });
+
+        var relSvc = CreateRelationshipService();
+        var rel = await relSvc.CreateAsync(new RelationshipDefinition
+        {
+            Name = "AtoB", SourceEntityId = a.Id, TargetEntityId = b.Id, RelationshipType = RelationshipType.OneToMany
+        });
+
+        var recSvc = CreateRecordService();
+        var recC = await recSvc.CreateAsync(c.Id, """{"Name":"C1"}""");
+        var recB = await recSvc.CreateAsync(b.Id, """{"Name":"B1"}""");
+
+        // recC belongs to entity C, not A (the source entity)
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateLinkAsync(recC.Id, rel.Id, recB.Id));
+    }
+
+    [Fact]
+    public async Task Create_RequiredFieldMissing_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "Validated" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Title", DataType = FieldDataType.Text, IsRequired = true
+        });
+
+        var recSvc = CreateRecordService();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{}"""));
+        Assert.Contains("required", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_MaxLengthExceeded_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "MaxLen" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Code", DataType = FieldDataType.Text, MaxLength = 5
+        });
+
+        var recSvc = CreateRecordService();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{"Code":"TOOLONG"}"""));
+        Assert.Contains("max length", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_InvalidChoiceValue_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "ChoiceVal" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Status", DataType = FieldDataType.Choice, OptionsJson = """["Open","Closed"]"""
+        });
+
+        var recSvc = CreateRecordService();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{"Status":"Invalid"}"""));
+        Assert.Contains("must be one of", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_NumericMinViolation_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "NumVal" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Qty", DataType = FieldDataType.Number, MinValue = 1, MaxValue = 100
+        });
+
+        var recSvc = CreateRecordService();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{"Qty":0}"""));
+        Assert.Contains("≥ 1", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetAll_NumericSort_CorrectOrder()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "NumSort" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "Score", DataType = FieldDataType.Number });
+
+        var recSvc = CreateRecordService();
+        await recSvc.CreateAsync(entity.Id, """{"Score":2}""");
+        await recSvc.CreateAsync(entity.Id, """{"Score":10}""");
+        await recSvc.CreateAsync(entity.Id, """{"Score":1}""");
+
+        var page = await recSvc.GetAllAsync(entity.Id, sortField: "Score", sortDir: "asc");
+        var scores = page.Records.Select(r =>
+        {
+            using var doc = JsonDocument.Parse(r.DataJson);
+            return doc.RootElement.GetProperty("Score").GetInt32();
+        }).ToList();
+
+        Assert.Equal(new[] { 1, 2, 10 }, scores);
+    }
 }
