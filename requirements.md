@@ -113,8 +113,8 @@ It is a simple join row: `(relationship_id, source_record_id, target_record_id)`
 | FR-2.3  | Master screen supports column-level sorting and filtering |
 | FR-2.4  | Master screen supports multi-select of records (for bulk delete, export, etc.) |
 | FR-2.5  | **Detail screen**: single layout for both create and edit modes; auto-generated ID is hidden from the user |
-| FR-2.6  | Detail screen shows related records (grouped by relationship) with navigation to their detail screens |
-| FR-2.7  | On the detail screen, parent (ManyToOne) relationships are rendered as combo/dropdown lists for selection |
+| FR-2.6  | Detail screen shows child records in a full grid (table) below the parent form, with inline add/edit/delete — so users manage children without navigating away |
+| FR-2.7  | On the detail screen, parent (ManyToOne) relationships are rendered as combo/dropdown lists for selection, with a navigate-to-parent (↗) button |
 | FR-2.8  | Delete a record (respecting cascade rules on relationships) |
 | FR-2.9  | Link / unlink records according to relationship definitions |
 | FR-2.10 | Search records across entities (global search) |
@@ -177,6 +177,8 @@ It is a simple join row: `(relationship_id, source_record_id, target_record_id)`
 | Secondary       | `#93A680` | Muted sage         |
 | Background/Neutral | `#D9CBBF` | Warm beige      |
 - Component library: TBD (candidates: MudBlazor, Fluent UI Blazor, Radzen).
+- Browser tab title: always shows "xrm" (no per-page titles).
+- Favicon: "xrm" text in biophilic green (#045929), transparent background.
 
 ---
 
