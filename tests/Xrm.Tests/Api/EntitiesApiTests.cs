@@ -47,6 +47,68 @@ public class EntitiesApiTests : IClassFixture<XrmWebApplicationFactory>
     }
 
     [Fact]
+    public async Task UpdateEntity_NotFound_Returns404()
+    {
+        var response = await _client.PutAsJsonAsync($"/api/entities/{Guid.NewGuid()}", new { Name = "Ghost" });
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteEntity_NotFound_Returns404()
+    {
+        var response = await _client.DeleteAsync($"/api/entities/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRelationships_ReturnsOk()
+    {
+        var createRes = await _client.PostAsJsonAsync("/api/entities", new { Name = "RelEntity" });
+        var entity = await createRes.Content.ReadFromJsonAsync<EntityDefinition>(JsonOpts);
+
+        var response = await _client.GetAsync($"/api/entities/{entity!.Id}/relationships");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SeedDemo_ReturnsOk()
+    {
+        var response = await _client.PostAsync("/api/entities/seed-demo", null);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateEntity_WithIsHomeEntity_ClearsOthers()
+    {
+        var first = await _client.PostAsJsonAsync("/api/entities", new { Name = "Home1", IsHomeEntity = true });
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+
+        var second = await _client.PostAsJsonAsync("/api/entities", new { Name = "Home2", IsHomeEntity = true });
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+
+        var firstEntity = await first.Content.ReadFromJsonAsync<EntityDefinition>(JsonOpts);
+        var refreshed = await _client.GetAsync($"/api/entities/{firstEntity!.Id}");
+        var refreshedEntity = await refreshed.Content.ReadFromJsonAsync<EntityDefinition>(JsonOpts);
+        Assert.False(refreshedEntity!.IsHomeEntity);
+    }
+
+    [Fact]
+    public async Task UpdateEntity_SetIsHomeEntity_ClearsOthers()
+    {
+        var first = await _client.PostAsJsonAsync("/api/entities", new { Name = "HomeUpd1", IsHomeEntity = true });
+        var firstEntity = await first.Content.ReadFromJsonAsync<EntityDefinition>(JsonOpts);
+
+        var second = await _client.PostAsJsonAsync("/api/entities", new { Name = "HomeUpd2" });
+        var secondEntity = await second.Content.ReadFromJsonAsync<EntityDefinition>(JsonOpts);
+
+        await _client.PutAsJsonAsync($"/api/entities/{secondEntity!.Id}", new { Name = "HomeUpd2", IsHomeEntity = true });
+
+        var refreshed = await _client.GetAsync($"/api/entities/{firstEntity!.Id}");
+        var refreshedEntity = await refreshed.Content.ReadFromJsonAsync<EntityDefinition>(JsonOpts);
+        Assert.False(refreshedEntity!.IsHomeEntity);
+    }
+
+    [Fact]
     public async Task Crud_FullLifecycle()
     {
         // Create

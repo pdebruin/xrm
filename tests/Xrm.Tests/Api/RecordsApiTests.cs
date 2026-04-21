@@ -89,4 +89,135 @@ public class RecordsApiTests : IClassFixture<XrmWebApplicationFactory>
         var deleteRes = await _client.DeleteAsync($"/api/entities/{entityId}/records/{recordId}");
         Assert.Equal(HttpStatusCode.NoContent, deleteRes.StatusCode);
     }
+
+    [Fact]
+    public async Task GetRecord_NotFound_Returns404()
+    {
+        var entityId = await CreateEntityAsync("GetNotFoundEntity");
+        var response = await _client.GetAsync($"/api/entities/{entityId}/records/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateRecord_NotFound_Returns404()
+    {
+        var entityId = await CreateEntityAsync("UpdateNFEntity");
+        var response = await _client.PutAsJsonAsync(
+            $"/api/entities/{entityId}/records/{Guid.NewGuid()}",
+            new { DataJson = """{"Name":"Ghost"}""" });
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteRecord_NotFound_Returns404()
+    {
+        var entityId = await CreateEntityAsync("DeleteNFEntity");
+        var response = await _client.DeleteAsync($"/api/entities/{entityId}/records/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRecords_WithSortField_ReturnsSorted()
+    {
+        var entityId = await CreateEntityAsync("SortEntity");
+        await _client.PostAsJsonAsync($"/api/entities/{entityId}/records", new { DataJson = """{"Name":"Banana"}""" });
+        await _client.PostAsJsonAsync($"/api/entities/{entityId}/records", new { DataJson = """{"Name":"Apple"}""" });
+
+        var response = await _client.GetAsync($"/api/entities/{entityId}/records?sortField=Name&sortDir=asc");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRecords_WithSortFieldDesc_ReturnsSorted()
+    {
+        var entityId = await CreateEntityAsync("SortDescEntity");
+        await _client.PostAsJsonAsync($"/api/entities/{entityId}/records", new { DataJson = """{"Name":"Alpha"}""" });
+        await _client.PostAsJsonAsync($"/api/entities/{entityId}/records", new { DataJson = """{"Name":"Zeta"}""" });
+
+        var response = await _client.GetAsync($"/api/entities/{entityId}/records?sortField=Name&sortDir=desc");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRecords_WithFilter_FiltersResults()
+    {
+        var entityId = await CreateEntityAsync("FilterEntity");
+        await _client.PostAsJsonAsync($"/api/entities/{entityId}/records", new { DataJson = """{"Name":"Match"}""" });
+        await _client.PostAsJsonAsync($"/api/entities/{entityId}/records", new { DataJson = """{"Name":"Other"}""" });
+
+        var response = await _client.GetAsync($"/api/entities/{entityId}/records?filter=Match");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        Assert.Equal(1, doc.RootElement.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetRecords_DescSort_ReturnsResults()
+    {
+        var entityId = await CreateEntityAsync("DescSortEntity");
+        await _client.PostAsJsonAsync($"/api/entities/{entityId}/records", new { DataJson = """{"Name":"A"}""" });
+        await _client.PostAsJsonAsync($"/api/entities/{entityId}/records", new { DataJson = """{"Name":"B"}""" });
+
+        var response = await _client.GetAsync($"/api/entities/{entityId}/records?sortDir=desc");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RecordLinks_FullLifecycle()
+    {
+        var sourceEntityId = await CreateEntityAsync("LinkSourceEntity");
+        var targetEntityId = await CreateEntityAsync("LinkTargetEntity");
+
+        // Create a relationship
+        var relRes = await _client.PostAsJsonAsync("/api/relationships", new
+        {
+            Name = "LinkTestRel",
+            SourceEntityId = sourceEntityId,
+            TargetEntityId = targetEntityId,
+            RelationshipType = "OneToMany",
+            CascadeBehavior = "None"
+        });
+        var rel = await relRes.Content.ReadFromJsonAsync<JsonElement>();
+        var relId = rel.GetProperty("id").GetString();
+
+        // Create records
+        var srcRecRes = await _client.PostAsJsonAsync($"/api/entities/{sourceEntityId}/records", new { DataJson = """{"Name":"Source"}""" });
+        var srcRec = await srcRecRes.Content.ReadFromJsonAsync<JsonElement>();
+        var srcRecId = srcRec.GetProperty("id").GetString();
+
+        var tgtRecRes = await _client.PostAsJsonAsync($"/api/entities/{targetEntityId}/records", new { DataJson = """{"Name":"Target"}""" });
+        var tgtRec = await tgtRecRes.Content.ReadFromJsonAsync<JsonElement>();
+        var tgtRecId = tgtRec.GetProperty("id").GetString();
+
+        // Create link
+        var linkRes = await _client.PostAsJsonAsync(
+            $"/api/entities/{sourceEntityId}/records/{srcRecId}/links",
+            new { RelationshipDefinitionId = relId, TargetRecordId = tgtRecId });
+        Assert.Equal(HttpStatusCode.OK, linkRes.StatusCode);
+
+        // Get links
+        var getLinksRes = await _client.GetAsync($"/api/entities/{sourceEntityId}/records/{srcRecId}/links");
+        Assert.Equal(HttpStatusCode.OK, getLinksRes.StatusCode);
+        var links = await getLinksRes.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(links.GetArrayLength() >= 1);
+        var linkId = links[0].GetProperty("id").GetString();
+
+        // Delete link
+        var deleteLinkRes = await _client.DeleteAsync($"/api/entities/{sourceEntityId}/records/{srcRecId}/links/{linkId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteLinkRes.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteLink_NotFound_Returns404()
+    {
+        var entityId = await CreateEntityAsync("DeleteLinkNFEntity");
+        var recRes = await _client.PostAsJsonAsync($"/api/entities/{entityId}/records", new { DataJson = """{"Name":"X"}""" });
+        var rec = await recRes.Content.ReadFromJsonAsync<JsonElement>();
+        var recId = rec.GetProperty("id").GetString();
+
+        var response = await _client.DeleteAsync($"/api/entities/{entityId}/records/{recId}/links/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
