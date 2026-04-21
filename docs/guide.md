@@ -8,13 +8,8 @@ a generated UI.
 
 ## Getting Started
 
-```bash
-cd src/Xrm.Server
-dotnet run
-```
-
-Open **http://localhost:5186** in your browser. On first run the database is empty —
-the demo data seeder automatically loads a CRM-style schema with sample records.
+When you open XRM, the demo data seeder automatically loads a CRM-style schema with
+sample records on first run.
 
 > The screenshots in this guide show the built-in demo data: Companies, Contacts,
 > Products, Activities, Orders, and Order Lines. Your own schemas will look different
