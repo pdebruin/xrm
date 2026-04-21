@@ -1,0 +1,226 @@
+@page "/admin/relationships"
+@using Xrm.Server.Models
+@inject HttpClient Http
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Relationship Designer</PageTitle>
+
+<div class="detail-header">
+    <button class="btn btn-link" @onclick="GoBack">← Back to Entities</button>
+    <h3>Relationships</h3>
+</div>
+
+<div class="admin-header">
+    <span></span>
+    <button class="btn btn-primary btn-sm" @onclick="StartCreate">+ New Relationship</button>
+</div>
+
+@if (_relationships is null)
+{
+    <p>Loading...</p>
+}
+else if (_relationships.Count == 0)
+{
+    <p class="text-muted">No relationships defined yet. Create one to link entities together.</p>
+}
+else
+{
+    <table class="table table-sm table-hover">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Source Entity</th>
+                <th>Target Entity</th>
+                <th>Type</th>
+                <th>On Delete</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var rel in _relationships)
+            {
+                <tr>
+                    <td>@(rel.DisplayName ?? rel.Name)</td>
+                    <td>@(rel.SourceEntity?.DisplayName ?? rel.SourceEntity?.Name ?? "—")</td>
+                    <td>@(rel.TargetEntity?.DisplayName ?? rel.TargetEntity?.Name ?? "—")</td>
+                    <td><span class="badge bg-info">@rel.RelationshipType</span></td>
+                    <td><span class="badge bg-warning text-dark">@rel.CascadeBehavior</span></td>
+                    <td>
+                        <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => StartEdit(rel)">Edit</button>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteRel(rel.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (_showModal)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editingId is null ? "New Relationship" : "Edit Relationship")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name (identifier)</label>
+                        <input class="form-control" @bind="_form.Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Display Name</label>
+                        <input class="form-control" @bind="_form.DisplayName" placeholder="e.g. Company → Contacts" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Source Entity (parent / "one" side)</label>
+                        <select class="form-select" @bind="_form.SourceEntityId">
+                            <option value="">-- Select --</option>
+                            @if (_entities is not null)
+                            {
+                                @foreach (var e in _entities)
+                                {
+                                    <option value="@e.Id">@(e.DisplayName ?? e.Name)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target Entity (child / "many" side)</label>
+                        <select class="form-select" @bind="_form.TargetEntityId">
+                            <option value="">-- Select --</option>
+                            @if (_entities is not null)
+                            {
+                                @foreach (var e in _entities)
+                                {
+                                    <option value="@e.Id">@(e.DisplayName ?? e.Name)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Relationship Type</label>
+                        <select class="form-select" @bind="_form.RelationshipType">
+                            @foreach (var rt in Enum.GetValues<RelationshipType>())
+                            {
+                                <option value="@rt">@rt</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cascade on Delete</label>
+                        <select class="form-select" @bind="_form.CascadeBehavior">
+                            @foreach (var cb in Enum.GetValues<CascadeBehavior>())
+                            {
+                                <option value="@cb">@cb</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveRel">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop show"></div>
+}
+
+@code {
+    private List<RelationshipDefinition>? _relationships;
+    private List<EntityDefinition>? _entities;
+    private bool _showModal;
+    private Guid? _editingId;
+    private RelForm _form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _entities = await Http.GetFromJsonAsync<List<EntityDefinition>>("api/entities");
+        await LoadRelationships();
+    }
+
+    private async Task LoadRelationships()
+    {
+        _relationships = await Http.GetFromJsonAsync<List<RelationshipDefinition>>("api/relationships");
+    }
+
+    private void StartCreate()
+    {
+        _editingId = null;
+        _form = new RelForm();
+        _showModal = true;
+    }
+
+    private void StartEdit(RelationshipDefinition rel)
+    {
+        _editingId = rel.Id;
+        _form = new RelForm
+        {
+            Name = rel.Name,
+            DisplayName = rel.DisplayName ?? "",
+            SourceEntityId = rel.SourceEntityId.ToString(),
+            TargetEntityId = rel.TargetEntityId.ToString(),
+            RelationshipType = rel.RelationshipType,
+            CascadeBehavior = rel.CascadeBehavior
+        };
+        _showModal = true;
+    }
+
+    private async Task SaveRel()
+    {
+        if (!Guid.TryParse(_form.SourceEntityId, out var sourceId) ||
+            !Guid.TryParse(_form.TargetEntityId, out var targetId))
+            return;
+
+        var rel = new RelationshipDefinition
+        {
+            Id = _editingId ?? Guid.Empty,
+            Name = _form.Name,
+            DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? null : _form.DisplayName,
+            SourceEntityId = sourceId,
+            TargetEntityId = targetId,
+            RelationshipType = _form.RelationshipType,
+            CascadeBehavior = _form.CascadeBehavior
+        };
+
+        if (_editingId is not null)
+        {
+            await Http.PutAsJsonAsync($"api/relationships/{_editingId}", rel);
+        }
+        else
+        {
+            await Http.PostAsJsonAsync("api/relationships", rel);
+        }
+
+        CloseModal();
+        await LoadRelationships();
+    }
+
+    private async Task DeleteRel(Guid id)
+    {
+        await Http.DeleteAsync($"api/relationships/{id}");
+        await LoadRelationships();
+    }
+
+    private void CloseModal()
+    {
+        _showModal = false;
+        _editingId = null;
+        _form = new();
+    }
+
+    private void GoBack() => Nav.NavigateTo("admin/entities");
+
+    private class RelForm
+    {
+        public string Name { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string SourceEntityId { get; set; } = "";
+        public string TargetEntityId { get; set; } = "";
+        public RelationshipType RelationshipType { get; set; } = RelationshipType.OneToMany;
+        public CascadeBehavior CascadeBehavior { get; set; } = CascadeBehavior.None;
+    }
+}

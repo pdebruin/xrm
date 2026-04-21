@@ -31,6 +31,7 @@ else
                         {
                             <span class="badge bg-success me-2">Home</span>
                         }
+                        <a href="@($"admin/entities/{entity.Id}/fields")" class="btn btn-outline-secondary btn-sm me-1">Fields</a>
                         <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => EditEntity(entity)">Edit</button>
                         <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteEntity(entity.Id)">Delete</button>
                     </div>
@@ -38,6 +39,9 @@ else
             </div>
         }
     </div>
+
+    <hr />
+    <a href="admin/relationships" class="btn btn-outline-secondary">Manage Relationships</a>
 }
 
 @if (_showCreate || _editingEntity is not null)

@@ -1,0 +1,258 @@
+@page "/admin/entities/{EntityId:guid}/fields"
+@using Xrm.Server.Models
+@inject HttpClient Http
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Fields — @(_entityDef?.DisplayName ?? "Entity")</PageTitle>
+
+<div class="detail-header">
+    <button class="btn btn-link" @onclick="GoBack">← Back to Entities</button>
+    <h3>Fields for @(_entityDef?.DisplayName ?? _entityDef?.Name)</h3>
+</div>
+
+<div class="admin-header">
+    <span></span>
+    <button class="btn btn-primary btn-sm" @onclick="StartCreate">+ New Field</button>
+</div>
+
+@if (_fields is null)
+{
+    <p>Loading...</p>
+}
+else if (_fields.Count == 0)
+{
+    <p class="text-muted">No fields defined yet. Add some to make this entity useful.</p>
+}
+else
+{
+    <table class="table table-sm table-hover">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Display Name</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Order</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var field in _fields)
+            {
+                <tr>
+                    <td><code>@field.Name</code></td>
+                    <td>@(field.DisplayName ?? "—")</td>
+                    <td><span class="badge bg-secondary">@field.DataType</span></td>
+                    <td>@(field.IsRequired ? "✓" : "")</td>
+                    <td>@field.SortOrder</td>
+                    <td>
+                        <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => StartEdit(field)">Edit</button>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteField(field.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (_showModal)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editingId is null ? "New Field" : "Edit Field")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Name (identifier)</label>
+                            <input class="form-control" @bind="_form.Name" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Display Name</label>
+                            <input class="form-control" @bind="_form.DisplayName" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Data Type</label>
+                            <select class="form-select" @bind="_form.DataType">
+                                @foreach (var dt in Enum.GetValues<FieldDataType>())
+                                {
+                                    <option value="@dt">@dt</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Sort Order</label>
+                            <input type="number" class="form-control" @bind="_form.SortOrder" />
+                        </div>
+                        <div class="col-md-4 mb-3 d-flex align-items-end">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" @bind="_form.IsRequired" />
+                                <label class="form-check-label">Required</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Max Length</label>
+                            <input type="number" class="form-control" @bind="_form.MaxLength" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Min Value</label>
+                            <input type="number" class="form-control" step="any" @bind="_form.MinValue" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Max Value</label>
+                            <input type="number" class="form-control" step="any" @bind="_form.MaxValue" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Default Value</label>
+                        <input class="form-control" @bind="_form.DefaultValue" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Regex Pattern</label>
+                        <input class="form-control" @bind="_form.Pattern" placeholder="Optional validation pattern" />
+                    </div>
+
+                    @if (_form.DataType == FieldDataType.Choice || _form.DataType == FieldDataType.MultiChoice)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Options (one per line)</label>
+                            <textarea class="form-control" rows="4" @bind="_form.OptionsText"></textarea>
+                            <small class="text-muted">Enter each option on a separate line</small>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveField">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop show"></div>
+}
+
+@code {
+    [Parameter] public Guid EntityId { get; set; }
+
+    private EntityDefinition? _entityDef;
+    private List<FieldDefinition>? _fields;
+    private bool _showModal;
+    private Guid? _editingId;
+    private FieldForm _form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _entityDef = await Http.GetFromJsonAsync<EntityDefinition>($"api/entities/{EntityId}");
+        await LoadFields();
+    }
+
+    private async Task LoadFields()
+    {
+        _fields = await Http.GetFromJsonAsync<List<FieldDefinition>>($"api/entities/{EntityId}/fields");
+    }
+
+    private void StartCreate()
+    {
+        _editingId = null;
+        _form = new FieldForm { SortOrder = (_fields?.Count ?? 0) + 1 };
+        _showModal = true;
+    }
+
+    private void StartEdit(FieldDefinition field)
+    {
+        _editingId = field.Id;
+        _form = new FieldForm
+        {
+            Name = field.Name,
+            DisplayName = field.DisplayName ?? "",
+            DataType = field.DataType,
+            IsRequired = field.IsRequired,
+            SortOrder = field.SortOrder,
+            DefaultValue = field.DefaultValue ?? "",
+            MaxLength = field.MaxLength,
+            MinValue = field.MinValue,
+            MaxValue = field.MaxValue,
+            Pattern = field.Pattern ?? "",
+            OptionsText = field.OptionsJson is not null
+                ? string.Join("\n", System.Text.Json.JsonSerializer.Deserialize<List<string>>(field.OptionsJson) ?? new())
+                : ""
+        };
+        _showModal = true;
+    }
+
+    private async Task SaveField()
+    {
+        var optionsJson = (_form.DataType == FieldDataType.Choice || _form.DataType == FieldDataType.MultiChoice)
+            && !string.IsNullOrWhiteSpace(_form.OptionsText)
+            ? System.Text.Json.JsonSerializer.Serialize(
+                _form.OptionsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList())
+            : null;
+
+        var field = new FieldDefinition
+        {
+            Id = _editingId ?? Guid.Empty,
+            EntityDefinitionId = EntityId,
+            Name = _form.Name,
+            DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? null : _form.DisplayName,
+            DataType = _form.DataType,
+            IsRequired = _form.IsRequired,
+            SortOrder = _form.SortOrder,
+            DefaultValue = string.IsNullOrWhiteSpace(_form.DefaultValue) ? null : _form.DefaultValue,
+            MaxLength = _form.MaxLength,
+            MinValue = _form.MinValue,
+            MaxValue = _form.MaxValue,
+            Pattern = string.IsNullOrWhiteSpace(_form.Pattern) ? null : _form.Pattern,
+            OptionsJson = optionsJson
+        };
+
+        if (_editingId is not null)
+        {
+            await Http.PutAsJsonAsync($"api/entities/{EntityId}/fields/{_editingId}", field);
+        }
+        else
+        {
+            await Http.PostAsJsonAsync($"api/entities/{EntityId}/fields", field);
+        }
+
+        CloseModal();
+        await LoadFields();
+    }
+
+    private async Task DeleteField(Guid id)
+    {
+        await Http.DeleteAsync($"api/entities/{EntityId}/fields/{id}");
+        await LoadFields();
+    }
+
+    private void CloseModal()
+    {
+        _showModal = false;
+        _editingId = null;
+        _form = new();
+    }
+
+    private void GoBack() => Nav.NavigateTo("admin/entities");
+
+    private class FieldForm
+    {
+        public string Name { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public FieldDataType DataType { get; set; } = FieldDataType.Text;
+        public bool IsRequired { get; set; }
+        public int SortOrder { get; set; } = 1;
+        public string DefaultValue { get; set; } = "";
+        public int? MaxLength { get; set; }
+        public double? MinValue { get; set; }
+        public double? MaxValue { get; set; }
+        public string Pattern { get; set; } = "";
+        public string OptionsText { get; set; } = "";
+    }
+}
