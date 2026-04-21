@@ -92,22 +92,29 @@ else
             </div>
         }
 
-        @* Parent relationships as dropdowns *@
+        @* Parent relationships as dropdowns with navigation *@
         @foreach (var rel in _parentRelationships)
         {
             <div class="mb-3">
                 <label class="form-label">@(rel.DisplayName ?? rel.Name)</label>
-                <select class="form-select" value="@GetParentValue(rel.Id)" 
-                        @onchange="(e) => SetParentValue(rel.Id, e.Value?.ToString())">
-                    <option value="">-- None --</option>
-                    @if (_parentOptions.TryGetValue(rel.Id, out var options))
-                    {
-                        @foreach (var opt in options)
+                <div class="d-flex gap-2">
+                    <select class="form-select" value="@GetParentValue(rel.Id)" 
+                            @onchange="(e) => SetParentValue(rel.Id, e.Value?.ToString())">
+                        <option value="">-- None --</option>
+                        @if (_parentOptions.TryGetValue(rel.Id, out var options))
                         {
-                            <option value="@opt.Id">@opt.Label</option>
+                            @foreach (var opt in options)
+                            {
+                                <option value="@opt.Id">@opt.Label</option>
+                            }
                         }
+                    </select>
+                    @if (Guid.TryParse(GetParentValue(rel.Id), out _))
+                    {
+                        <button class="btn btn-outline-secondary btn-sm" title="Go to parent"
+                                @onclick="() => NavigateToParent(rel)">↗</button>
                     }
-                </select>
+                </div>
             </div>
         }
 
@@ -373,6 +380,14 @@ else
     }
 
     private void GoBack() => Nav.NavigateTo($"records/{EntityId}");
+
+    private void NavigateToParent(RelationshipDefinition rel)
+    {
+        if (_parentValues.TryGetValue(rel.Id, out var parentId) && Guid.TryParse(parentId, out var pid))
+        {
+            Nav.NavigateTo($"records/{rel.SourceEntityId}/{pid}");
+        }
+    }
 
     private string GetChildCellValue(string dataJson, string fieldName)
     {
