@@ -177,8 +177,8 @@ It is a simple join row: `(relationship_id, source_record_id, target_record_id)`
 | Secondary       | `#93A680` | Muted sage         |
 | Background/Neutral | `#D9CBBF` | Warm beige      |
 - Component library: TBD (candidates: MudBlazor, Fluent UI Blazor, Radzen).
-- Browser tab title: always shows "xrm" (no per-page titles).
-- Favicon: "xrm" text in biophilic green (#045929), transparent background.
+- Browser tab title: always shows "XRM" (no per-page titles).
+- Favicon: green circle with white "XRM" text, biophilic green (#045929).
 
 ---
 
