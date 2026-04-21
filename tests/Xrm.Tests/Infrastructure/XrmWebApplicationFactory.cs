@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xrm.Server.Data;
 
 namespace Xrm.Tests.Infrastructure;
@@ -35,6 +36,12 @@ public class XrmWebApplicationFactory : WebApplicationFactory<Program>
             // Re-register with in-memory SQLite
             services.AddDbContextFactory<XrmDbContext>(options =>
                 options.UseSqlite(_connection));
+
+            // Suppress EF Core SQL logging during tests
+            services.AddLogging(logging =>
+            {
+                logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
+            });
 
             // Ensure DB is created
             var sp = services.BuildServiceProvider();
