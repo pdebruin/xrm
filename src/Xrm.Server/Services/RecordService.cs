@@ -15,7 +15,7 @@ public class RecordService : IRecordService
         await using var db = await _dbFactory.CreateDbContextAsync();
         var query = db.Records.Where(r => r.EntityDefinitionId == entityId);
 
-        // Client-side filter on JSON content
+        // Server-side filter on JSON content
         if (!string.IsNullOrWhiteSpace(filter))
         {
             query = query.Where(r => r.DataJson.Contains(filter));
@@ -23,17 +23,55 @@ public class RecordService : IRecordService
 
         var total = await query.CountAsync();
 
-        // Sort by creation date (JSON field sorting would need computed columns)
-        query = sortDir == "desc"
-            ? query.OrderByDescending(r => r.CreatedAt)
-            : query.OrderBy(r => r.CreatedAt);
+        // If sorting by a field, we need to materialize and sort client-side
+        // since values are stored inside JSON. For default/no field, sort by CreatedAt.
+        if (string.IsNullOrEmpty(sortField))
+        {
+            query = sortDir == "desc"
+                ? query.OrderByDescending(r => r.CreatedAt)
+                : query.OrderBy(r => r.CreatedAt);
 
-        var records = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+            var records = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+            return new RecordPage(records, total, page, pageSize);
+        }
+        else
+        {
+            // Materialize all matching records, sort by JSON field value, then page
+            var all = await query.ToListAsync();
+            var sorted = SortByJsonField(all, sortField, sortDir);
+            var paged = sorted.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            return new RecordPage(paged, total, page, pageSize);
+        }
+    }
 
-        return new RecordPage(records, total, page, pageSize);
+    private static List<Record> SortByJsonField(List<Record> records, string fieldName, string dir)
+    {
+        return (dir == "desc"
+            ? records.OrderByDescending(r => ExtractSortKey(r.DataJson, fieldName))
+            : records.OrderBy(r => ExtractSortKey(r.DataJson, fieldName))
+        ).ToList();
+    }
+
+    private static string ExtractSortKey(string dataJson, string fieldName)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(dataJson);
+            if (doc.RootElement.TryGetProperty(fieldName, out var val))
+            {
+                return val.ValueKind switch
+                {
+                    System.Text.Json.JsonValueKind.Number => val.GetDouble().ToString("F10"),
+                    System.Text.Json.JsonValueKind.Null => "",
+                    _ => val.ToString() ?? ""
+                };
+            }
+        }
+        catch { }
+        return "";
     }
 
     public async Task<Record?> GetByIdAsync(Guid entityId, Guid id)

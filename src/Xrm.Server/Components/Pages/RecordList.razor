@@ -115,7 +115,7 @@ else
         _total = result.Total;
     }
 
-    private void SortBy(string field)
+    private async Task SortBy(string field)
     {
         if (_sortField == field)
             _sortDir = _sortDir == "asc" ? "desc" : "asc";
@@ -124,7 +124,7 @@ else
             _sortField = field;
             _sortDir = "asc";
         }
-        _ = LoadRecords();
+        await LoadRecords();
     }
 
     private void OpenDetail(Guid id) => Nav.NavigateTo($"records/{EntityId}/{id}");
