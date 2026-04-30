@@ -24,109 +24,162 @@ else
 {
     <div class="detail-header">
         <button class="btn btn-link" @onclick="GoBack">← Back to @(_entityDef.PluralName ?? _entityDef.DisplayName)</button>
-        <h3>@(_isNew ? "New" : "Edit") @(_entityDef.DisplayName ?? _entityDef.Name)</h3>
+        <h3>
+            @if (_isNew) { <span>New @(_entityDef.DisplayName ?? _entityDef.Name)</span> }
+            else { <span>@(_entityDef.DisplayName ?? _entityDef.Name)</span> }
+        </h3>
     </div>
 
-    <div class="detail-form">
-        @foreach (var field in _fields)
-        {
-            <div class="mb-3">
-                <label class="form-label">
-                    @(field.DisplayName ?? field.Name)
-                    @if (field.IsRequired) { <span class="text-danger">*</span> }
-                </label>
-                @switch (field.DataType)
-                {
-                    case FieldDataType.Boolean:
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" 
-                                   checked="@GetBoolValue(field.Name)"
-                                   @onchange="(e) => SetValue(field.Name, e.Value)" />
-                        </div>
-                        break;
-
-                    case FieldDataType.Choice:
-                        <select class="form-select" value="@GetValue(field.Name)" 
-                                @onchange="(e) => SetValue(field.Name, e.Value)">
-                            <option value="">-- Select --</option>
-                            @foreach (var opt in GetOptions(field))
-                            {
-                                <option value="@opt">@opt</option>
-                            }
-                        </select>
-                        break;
-
-                    case FieldDataType.RichText:
-                        <textarea class="form-control" rows="4" 
-                                  value="@GetValue(field.Name)"
-                                  @onchange="(e) => SetValue(field.Name, e.Value)"></textarea>
-                        break;
-
-                    case FieldDataType.Number:
-                    case FieldDataType.Decimal:
-                        <input type="number" class="form-control" 
-                               step="@(field.DataType == FieldDataType.Decimal ? "0.01" : "1")"
-                               value="@GetValue(field.Name)"
-                               @onchange="(e) => SetValue(field.Name, e.Value)" />
-                        break;
-
-                    case FieldDataType.Date:
-                        <input type="date" class="form-control"
-                               value="@GetValue(field.Name)"
-                               @onchange="(e) => SetValue(field.Name, e.Value)" />
-                        break;
-
-                    case FieldDataType.DateTime:
-                        <input type="datetime-local" class="form-control"
-                               value="@GetValue(field.Name)"
-                               @onchange="(e) => SetValue(field.Name, e.Value)" />
-                        break;
-
-                    default:
-                        <input type="@GetInputType(field.DataType)" class="form-control"
-                               maxlength="@(field.MaxLength?.ToString() ?? "")"
-                               value="@GetValue(field.Name)"
-                               @onchange="(e) => SetValue(field.Name, e.Value)" />
-                        break;
-                }
+    @if (!_isNew && !_editing)
+    {
+        @* === READ MODE === *@
+        <div class="detail-read">
+            <div class="d-flex justify-content-end mb-2">
+                <button class="btn btn-sm btn-outline-primary" @onclick="() => _editing = true">✎ Edit</button>
             </div>
-        }
-
-        @* Parent relationships as dropdowns with navigation *@
-        @foreach (var rel in _parentRelationships)
-        {
-            <div class="mb-3">
-                <label class="form-label">@(rel.DisplayName ?? rel.Name)</label>
-                <div class="d-flex gap-2">
-                    <select class="form-select" value="@GetParentValue(rel.Id)" 
-                            @onchange="(e) => SetParentValue(rel.Id, e.Value?.ToString())">
-                        <option value="">-- None --</option>
-                        @if (_parentOptions.TryGetValue(rel.Id, out var options))
-                        {
-                            @foreach (var opt in options)
-                            {
-                                <option value="@opt.Id">@opt.Label</option>
-                            }
-                        }
-                    </select>
-                    @if (Guid.TryParse(GetParentValue(rel.Id), out _))
+            <table class="table table-sm detail-table">
+                <tbody>
+                    @foreach (var field in _fields)
                     {
-                        <button class="btn btn-outline-secondary btn-sm" title="Go to parent"
-                                @onclick="() => NavigateToParent(rel)">↗</button>
+                        <tr>
+                            <th class="text-muted" style="width:200px;white-space:nowrap;">@(field.DisplayName ?? field.Name)</th>
+                            <td>@GetDisplayValue(field)</td>
+                        </tr>
+                    }
+                    @foreach (var rel in _parentRelationships)
+                    {
+                        <tr>
+                            <th class="text-muted" style="width:200px;white-space:nowrap;">@(rel.DisplayName ?? rel.Name)</th>
+                            <td>
+                                @if (Guid.TryParse(GetParentValue(rel.Id), out var pid))
+                                {
+                                    var label = _parentOptions.TryGetValue(rel.Id, out var opts)
+                                        ? opts.FirstOrDefault(o => o.Id == pid)?.Label ?? pid.ToString()
+                                        : pid.ToString();
+                                    <a href="@($"records/{rel.SourceEntityId}/{pid}")" class="text-decoration-none">@label ↗</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        @* === EDIT MODE (also used for new records) === *@
+        <div class="detail-form">
+            @foreach (var field in _fields)
+            {
+                <div class="mb-3">
+                    <label class="form-label">
+                        @(field.DisplayName ?? field.Name)
+                        @if (field.IsRequired) { <span class="text-danger">*</span> }
+                    </label>
+                    @switch (field.DataType)
+                    {
+                        case FieldDataType.Boolean:
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" 
+                                       checked="@GetBoolValue(field.Name)"
+                                       @onchange="(e) => SetValue(field.Name, e.Value)" />
+                            </div>
+                            break;
+
+                        case FieldDataType.Choice:
+                            <select class="form-select" value="@GetValue(field.Name)" 
+                                    @onchange="(e) => SetValue(field.Name, e.Value)">
+                                <option value="">-- Select --</option>
+                                @foreach (var opt in GetOptions(field))
+                                {
+                                    <option value="@opt">@opt</option>
+                                }
+                            </select>
+                            break;
+
+                        case FieldDataType.RichText:
+                            <textarea class="form-control" rows="4" 
+                                      value="@GetValue(field.Name)"
+                                      @onchange="(e) => SetValue(field.Name, e.Value)"></textarea>
+                            break;
+
+                        case FieldDataType.Number:
+                        case FieldDataType.Decimal:
+                            <input type="number" class="form-control" 
+                                   step="@(field.DataType == FieldDataType.Decimal ? "0.01" : "1")"
+                                   value="@GetValue(field.Name)"
+                                   @onchange="(e) => SetValue(field.Name, e.Value)" />
+                            break;
+
+                        case FieldDataType.Date:
+                            <input type="date" class="form-control"
+                                   value="@GetValue(field.Name)"
+                                   @onchange="(e) => SetValue(field.Name, e.Value)" />
+                            break;
+
+                        case FieldDataType.DateTime:
+                            <input type="datetime-local" class="form-control"
+                                   value="@GetValue(field.Name)"
+                                   @onchange="(e) => SetValue(field.Name, e.Value)" />
+                            break;
+
+                        default:
+                            <input type="@GetInputType(field.DataType)" class="form-control"
+                                   maxlength="@(field.MaxLength?.ToString() ?? "")"
+                                   value="@GetValue(field.Name)"
+                                   @onchange="(e) => SetValue(field.Name, e.Value)" />
+                            break;
                     }
                 </div>
+            }
+
+            @* Parent relationships as dropdowns *@
+            @foreach (var rel in _parentRelationships)
+            {
+                <div class="mb-3">
+                    <label class="form-label">@(rel.DisplayName ?? rel.Name)</label>
+                    <div class="d-flex gap-2">
+                        <select class="form-select" value="@GetParentValue(rel.Id)" 
+                                @onchange="(e) => SetParentValue(rel.Id, e.Value?.ToString())">
+                            <option value="">-- None --</option>
+                            @if (_parentOptions.TryGetValue(rel.Id, out var options))
+                            {
+                                @foreach (var opt in options)
+                                {
+                                    <option value="@opt.Id">@opt.Label</option>
+                                }
+                            }
+                        </select>
+                        @if (Guid.TryParse(GetParentValue(rel.Id), out _))
+                        {
+                            <button class="btn btn-outline-secondary btn-sm" title="Go to parent"
+                                    @onclick="() => NavigateToParent(rel)">↗</button>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="detail-actions">
+                <button class="btn btn-primary" @onclick="Save" disabled="@_saving">
+                    @(_saving ? "Saving..." : "Save")
+                </button>
+                @if (!_isNew)
+                {
+                    <button class="btn btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                }
+                else
+                {
+                    <button class="btn btn-outline-secondary" @onclick="GoBack">Cancel</button>
+                }
             </div>
-        }
-
-        <div class="detail-actions">
-            <button class="btn btn-primary" @onclick="Save" disabled="@_saving">
-                @(_saving ? "Saving..." : "Save")
-            </button>
-            <button class="btn btn-outline-secondary" @onclick="GoBack">Cancel</button>
         </div>
-    </div>
+    }
 
-    @* Child relationships — full grid with CRUD *@
+    @* Child relationships — always visible *@
     @if (!_isNew && _childRelationships.Any())
     {
         <hr />
@@ -246,6 +299,7 @@ else
 
     private bool _isNew => RecordId is null;
     private bool _saving;
+    private bool _editing;
     private string? _error;
     private EntityDefinition? _entityDef;
     private List<FieldDefinition> _fields = new();
@@ -335,6 +389,15 @@ else
 
     private void SetValue(string fieldName, object? value) => _data[fieldName] = value;
 
+    private string GetDisplayValue(FieldDefinition field)
+    {
+        var raw = GetValue(field.Name);
+        if (string.IsNullOrEmpty(raw)) return "—";
+        if (field.DataType == FieldDataType.Boolean)
+            return raw.Equals("true", StringComparison.OrdinalIgnoreCase) || raw == "True" ? "Yes" : "No";
+        return raw;
+    }
+
     private string GetParentValue(Guid relId) => _parentValues.TryGetValue(relId, out var v) ? v ?? "" : "";
     private void SetParentValue(Guid relId, string? value) => _parentValues[relId] = value;
 
@@ -383,7 +446,7 @@ else
             {
                 await RecordService.UpdateAsync(EntityId, RecordId!.Value, json);
                 await SaveParentLinks();
-                Nav.NavigateTo($"records/{EntityId}");
+                _editing = false;
             }
         }
         catch (Exception ex) { _error = ex.Message; }
@@ -414,6 +477,7 @@ else
     }
 
     private void GoBack() => Nav.NavigateTo($"records/{EntityId}");
+    private void CancelEdit() => _editing = false;
 
     private void NavigateToParent(RelationshipDefinition rel)
     {
