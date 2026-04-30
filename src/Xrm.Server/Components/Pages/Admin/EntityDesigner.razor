@@ -80,6 +80,19 @@ else
                         <input type="checkbox" class="form-check-input" @bind="_form.IsHomeEntity" />
                         <label class="form-check-label">Home Entity (start-up screen)</label>
                     </div>
+                    @if (_editingEntity is not null && _editingEntityFields.Any())
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Primary Field (display label)</label>
+                            <select class="form-select" @bind="_form.PrimaryFieldId">
+                                <option value="">(First field by sort order)</option>
+                                @foreach (var f in _editingEntityFields)
+                                {
+                                    <option value="@f.Id">@(f.DisplayName ?? f.Name)</option>
+                                }
+                            </select>
+                        </div>
+                    }
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
@@ -95,6 +108,7 @@ else
     private List<EntityDefinition>? _entities;
     private bool _showCreate;
     private EntityDefinition? _editingEntity;
+    private List<FieldDefinition> _editingEntityFields = new();
     private EntityForm _form = new();
     private string? _error;
 
@@ -110,17 +124,20 @@ else
         catch (Exception ex) { _error = ex.Message; }
     }
 
-    private void EditEntity(EntityDefinition entity)
+    private async void EditEntity(EntityDefinition entity)
     {
-        _editingEntity = entity;
+        _editingEntity = await EntityService.GetByIdAsync(entity.Id);
+        _editingEntityFields = _editingEntity?.Fields?.OrderBy(f => f.SortOrder).ToList() ?? new();
         _form = new EntityForm
         {
-            Name = entity.Name,
-            DisplayName = entity.DisplayName ?? "",
-            PluralName = entity.PluralName ?? "",
-            Description = entity.Description ?? "",
-            IsHomeEntity = entity.IsHomeEntity
+            Name = _editingEntity!.Name,
+            DisplayName = _editingEntity.DisplayName ?? "",
+            PluralName = _editingEntity.PluralName ?? "",
+            Description = _editingEntity.Description ?? "",
+            IsHomeEntity = _editingEntity.IsHomeEntity,
+            PrimaryFieldId = _editingEntity.PrimaryFieldId?.ToString() ?? ""
         };
+        StateHasChanged();
     }
 
     private async Task SaveEntity()
@@ -135,6 +152,7 @@ else
                 _editingEntity.PluralName = _form.PluralName;
                 _editingEntity.Description = _form.Description;
                 _editingEntity.IsHomeEntity = _form.IsHomeEntity;
+                _editingEntity.PrimaryFieldId = Guid.TryParse(_form.PrimaryFieldId, out var pfId) ? pfId : null;
                 await EntityService.UpdateAsync(_editingEntity.Id, _editingEntity);
             }
             else
@@ -180,5 +198,6 @@ else
         public string PluralName { get; set; } = "";
         public string Description { get; set; } = "";
         public bool IsHomeEntity { get; set; }
+        public string PrimaryFieldId { get; set; } = "";
     }
 }

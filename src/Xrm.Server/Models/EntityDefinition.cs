@@ -13,6 +13,12 @@ public class EntityDefinition
     public bool IsHomeEntity { get; set; }
     public int SortOrder { get; set; }
 
+    /// <summary>
+    /// The field used as the display label for records of this entity (e.g. in dropdowns, relationship grids).
+    /// If null, falls back to the first field by SortOrder.
+    /// </summary>
+    public Guid? PrimaryFieldId { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = "system";
     public DateTime ModifiedAt { get; set; }

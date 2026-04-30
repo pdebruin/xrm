@@ -280,7 +280,7 @@ else
         foreach (var rel in _parentRelationships)
         {
             var parentEntity = await EntityService.GetByIdAsync(rel.SourceEntityId);
-            var displayField = parentEntity?.Fields?.OrderBy(f => f.SortOrder).FirstOrDefault()?.Name ?? "Name";
+            var displayField = GetPrimaryFieldName(parentEntity);
             var parentRecords = await RecordService.GetAllAsync(rel.SourceEntityId, 1, 100);
 
             _parentOptions[rel.Id] = parentRecords.Records.Select(r =>
@@ -532,6 +532,17 @@ else
             await LoadChildSection(rel);
         }
         catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private static string GetPrimaryFieldName(EntityDefinition? entity)
+    {
+        if (entity is null) return "Name";
+        if (entity.PrimaryFieldId is not null)
+        {
+            var pf = entity.Fields?.FirstOrDefault(f => f.Id == entity.PrimaryFieldId);
+            if (pf is not null) return pf.Name;
+        }
+        return entity.Fields?.OrderBy(f => f.SortOrder).FirstOrDefault()?.Name ?? "Name";
     }
 
     private class ParentOption { public Guid Id { get; set; } public string Label { get; set; } = ""; }

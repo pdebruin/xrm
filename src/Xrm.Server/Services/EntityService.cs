@@ -67,6 +67,7 @@ public class EntityService : IEntityService
         existing.Icon = entity.Icon;
         existing.IsHomeEntity = entity.IsHomeEntity;
         existing.SortOrder = entity.SortOrder;
+        existing.PrimaryFieldId = entity.PrimaryFieldId;
 
         await db.SaveChangesAsync();
         return existing;

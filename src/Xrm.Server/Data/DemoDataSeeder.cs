@@ -105,6 +105,14 @@ public static class DemoDataSeeder
         };
         db.FieldDefinitions.AddRange(fields);
 
+        // Set primary display fields
+        company.PrimaryFieldId = fields.First(f => f.EntityDefinitionId == company.Id && f.Name == "Name").Id;
+        contact.PrimaryFieldId = fields.First(f => f.EntityDefinitionId == contact.Id && f.Name == "FirstName").Id;
+        product.PrimaryFieldId = fields.First(f => f.EntityDefinitionId == product.Id && f.Name == "Name").Id;
+        activity.PrimaryFieldId = fields.First(f => f.EntityDefinitionId == activity.Id && f.Name == "Subject").Id;
+        order.PrimaryFieldId = fields.First(f => f.EntityDefinitionId == order.Id && f.Name == "OrderNumber").Id;
+        orderLine.PrimaryFieldId = fields.First(f => f.EntityDefinitionId == orderLine.Id && f.Name == "ProductName").Id;
+
         // --- Relationship Definitions ---
         var companyContacts = new RelationshipDefinition
         {
