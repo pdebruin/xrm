@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using Xrm.Server.Data;
 using Xrm.Server.Models;
 
@@ -35,6 +36,8 @@ public class FieldService : IFieldService
         if (!entityExists)
             throw new InvalidOperationException($"Entity {entityId} not found");
 
+        ValidateOptionsJson(field);
+
         field.Id = Guid.NewGuid();
         field.EntityDefinitionId = entityId;
         db.FieldDefinitions.Add(field);
@@ -61,6 +64,8 @@ public class FieldService : IFieldService
         existing.Pattern = field.Pattern;
         existing.OptionsJson = field.OptionsJson;
 
+        ValidateOptionsJson(existing);
+
         await db.SaveChangesAsync();
         return existing;
     }
@@ -75,5 +80,27 @@ public class FieldService : IFieldService
         db.FieldDefinitions.Remove(field);
         await db.SaveChangesAsync();
         return true;
+    }
+
+    private static void ValidateOptionsJson(FieldDefinition field)
+    {
+        if (string.IsNullOrEmpty(field.OptionsJson)) return;
+        if (field.DataType != FieldDataType.Choice && field.DataType != FieldDataType.MultiChoice)
+        {
+            field.OptionsJson = null;
+            return;
+        }
+
+        try
+        {
+            var options = JsonSerializer.Deserialize<List<string>>(field.OptionsJson);
+            if (options is null)
+                throw new InvalidOperationException("OptionsJson must be a JSON array of strings, e.g. [\"A\",\"B\"]");
+        }
+        catch (JsonException)
+        {
+            throw new InvalidOperationException(
+                $"OptionsJson is not valid JSON. Expected a JSON array of strings, e.g. [\"Option1\",\"Option2\"]. Got: {field.OptionsJson}");
+        }
     }
 }

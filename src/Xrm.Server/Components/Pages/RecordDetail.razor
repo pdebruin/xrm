@@ -341,7 +341,14 @@ else
     private List<string> GetOptions(FieldDefinition field)
     {
         if (string.IsNullOrEmpty(field.OptionsJson)) return new();
-        return JsonSerializer.Deserialize<List<string>>(field.OptionsJson) ?? new();
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(field.OptionsJson) ?? new();
+        }
+        catch (JsonException)
+        {
+            return new();
+        }
     }
 
     private string GetInputType(FieldDataType type) => type switch

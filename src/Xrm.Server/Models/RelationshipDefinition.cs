@@ -7,7 +7,9 @@ public class RelationshipDefinition
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? DisplayName { get; set; }
+    /// <summary>The "one" (parent) side of a OneToMany relationship.</summary>
     public Guid SourceEntityId { get; set; }
+    /// <summary>The "many" (child) side of a OneToMany relationship.</summary>
     public Guid TargetEntityId { get; set; }
     public RelationshipType RelationshipType { get; set; }
     public CascadeBehavior CascadeBehavior { get; set; }

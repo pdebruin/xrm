@@ -19,7 +19,10 @@ public class FieldDefinition
     public double? MaxValue { get; set; }
     public string? Pattern { get; set; }
 
-    // For Choice/MultiChoice fields
+    /// <summary>
+    /// JSON array of option strings for Choice/MultiChoice fields.
+    /// Must be a valid JSON array, e.g.: ["Option1","Option2","Option3"]
+    /// </summary>
     public string? OptionsJson { get; set; }
 
     public DateTime CreatedAt { get; set; }
