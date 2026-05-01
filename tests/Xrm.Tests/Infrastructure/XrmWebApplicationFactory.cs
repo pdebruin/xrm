@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xrm.Server.Data;
+using Xrm.Core.Data;
 
 namespace Xrm.Tests.Infrastructure;
 

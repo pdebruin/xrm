@@ -1,0 +1,203 @@
+@page "/admin/entities"
+@using Xrm.Core.Models
+@using Xrm.Core.Services
+@inject IEntityService EntityService
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>XRM</PageTitle>
+
+<div class="admin-header">
+    <h2>Schema Designer</h2>
+    <button class="btn btn-primary btn-sm" @onclick="() => _showCreate = true">+ New Entity</button>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+@if (_entities is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="entity-list">
+        @foreach (var entity in _entities)
+        {
+            <div class="card mb-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="card-title mb-0">@(entity.DisplayName ?? entity.Name)</h5>
+                        <small class="text-muted">@entity.Name · @(entity.Fields?.Count ?? 0) fields</small>
+                    </div>
+                    <div>
+                        @if (entity.IsHomeEntity)
+                        {
+                            <span class="badge bg-success me-2">Home</span>
+                        }
+                        <a href="@($"admin/entities/{entity.Id}/fields")" class="btn btn-outline-secondary btn-sm me-1">Fields</a>
+                        <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => EditEntity(entity)">Edit</button>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteEntity(entity.Id)">Delete</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <hr />
+    <a href="admin/relationships" class="btn btn-outline-secondary">Manage Relationships</a>
+}
+
+@if (_showCreate || _editingEntity is not null)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editingEntity is null ? "New Entity" : "Edit Entity")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name (identifier)</label>
+                        <input class="form-control" @bind="_form.Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Display Name</label>
+                        <input class="form-control" @bind="_form.DisplayName" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Plural Name</label>
+                        <input class="form-control" @bind="_form.PluralName" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" @bind="_form.Description"></textarea>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" @bind="_form.IsHomeEntity" />
+                        <label class="form-check-label">Home Entity (start-up screen)</label>
+                    </div>
+                    @if (_editingEntity is not null && _editingEntityFields.Any())
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Primary Field (display label)</label>
+                            <select class="form-select" @bind="_form.PrimaryFieldId">
+                                <option value="">(First field by sort order)</option>
+                                @foreach (var f in _editingEntityFields)
+                                {
+                                    <option value="@f.Id">@(f.DisplayName ?? f.Name)</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveEntity">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop show"></div>
+}
+
+@code {
+    private List<EntityDefinition>? _entities;
+    private bool _showCreate;
+    private EntityDefinition? _editingEntity;
+    private List<FieldDefinition> _editingEntityFields = new();
+    private EntityForm _form = new();
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEntities();
+    }
+
+    private async Task LoadEntities()
+    {
+        _error = null;
+        try { _entities = await EntityService.GetAllAsync(); }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async void EditEntity(EntityDefinition entity)
+    {
+        _editingEntity = await EntityService.GetByIdAsync(entity.Id);
+        _editingEntityFields = _editingEntity?.Fields?.OrderBy(f => f.SortOrder).ToList() ?? new();
+        _form = new EntityForm
+        {
+            Name = _editingEntity!.Name,
+            DisplayName = _editingEntity.DisplayName ?? "",
+            PluralName = _editingEntity.PluralName ?? "",
+            Description = _editingEntity.Description ?? "",
+            IsHomeEntity = _editingEntity.IsHomeEntity,
+            PrimaryFieldId = _editingEntity.PrimaryFieldId?.ToString() ?? ""
+        };
+        StateHasChanged();
+    }
+
+    private async Task SaveEntity()
+    {
+        _error = null;
+        try
+        {
+            if (_editingEntity is not null)
+            {
+                _editingEntity.Name = _form.Name;
+                _editingEntity.DisplayName = _form.DisplayName;
+                _editingEntity.PluralName = _form.PluralName;
+                _editingEntity.Description = _form.Description;
+                _editingEntity.IsHomeEntity = _form.IsHomeEntity;
+                _editingEntity.PrimaryFieldId = Guid.TryParse(_form.PrimaryFieldId, out var pfId) ? pfId : null;
+                await EntityService.UpdateAsync(_editingEntity.Id, _editingEntity);
+            }
+            else
+            {
+                var entity = new EntityDefinition
+                {
+                    Name = _form.Name,
+                    DisplayName = _form.DisplayName,
+                    PluralName = _form.PluralName,
+                    Description = _form.Description,
+                    IsHomeEntity = _form.IsHomeEntity
+                };
+                await EntityService.CreateAsync(entity);
+            }
+            CloseModal();
+            await LoadEntities();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task DeleteEntity(Guid id)
+    {
+        _error = null;
+        try
+        {
+            await EntityService.DeleteAsync(id);
+            await LoadEntities();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private void CloseModal()
+    {
+        _showCreate = false;
+        _editingEntity = null;
+        _form = new();
+    }
+
+    private class EntityForm
+    {
+        public string Name { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string PluralName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public bool IsHomeEntity { get; set; }
+        public string PrimaryFieldId { get; set; } = "";
+    }
+}

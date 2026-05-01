@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Xrm.Server.Data;
-using Xrm.Server.Services;
+using Xrm.Core.Data;
+using Xrm.Core.Services;
 
 namespace Xrm.Tests.Infrastructure;
 
@@ -32,7 +32,7 @@ public class ServiceTestBase : IDisposable
         DbFactory = new TestDbContextFactory(options);
     }
 
-    protected EntityService CreateEntityService() => new(DbFactory);
+    protected EntityService CreateEntityService() => new(DbFactory, new DemoDataSeeder());
     protected FieldService CreateFieldService() => new(DbFactory);
     protected RelationshipService CreateRelationshipService() => new(DbFactory);
     protected RecordService CreateRecordService() => new(DbFactory);

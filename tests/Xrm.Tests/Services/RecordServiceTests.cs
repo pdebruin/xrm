@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Xrm.Server.Models;
+using Xrm.Core.Models;
 using Xrm.Tests.Infrastructure;
 
 namespace Xrm.Tests.Services;

@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Xrm.Server.Models;
+using Xrm.Core.Models;
 using Xrm.Tests.Infrastructure;
 
 namespace Xrm.Tests.Api;

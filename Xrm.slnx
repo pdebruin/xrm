@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Xrm.Core/Xrm.Core.csproj" />
+    <Project Path="src/Xrm.Blazor/Xrm.Blazor.csproj" />
     <Project Path="src/Xrm.Server/Xrm.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">

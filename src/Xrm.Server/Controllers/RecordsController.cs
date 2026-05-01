@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using Xrm.Server.Models;
-using Xrm.Server.Services;
+using Xrm.Core.Models;
+using Xrm.Core.Services;
 
 namespace Xrm.Server.Controllers;
 

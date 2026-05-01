@@ -1,19 +1,13 @@
 using Microsoft.EntityFrameworkCore;
-using Xrm.Server.Components;
-using Xrm.Server.Data;
-using Xrm.Server.Services;
+using Xrm.Blazor.Components;
+using Xrm.Core;
+using Xrm.Core.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database — factory pattern for short-lived contexts in Blazor Server
-builder.Services.AddDbContextFactory<XrmDbContext>(options =>
-    options.UseSqlite("Data Source=xrm.db"));
-
-// Application services (Blazor pages inject these directly)
-builder.Services.AddScoped<IEntityService, EntityService>();
-builder.Services.AddScoped<IFieldService, FieldService>();
-builder.Services.AddScoped<IRelationshipService, RelationshipService>();
-builder.Services.AddScoped<IRecordService, RecordService>();
+// XRM core services (DbContext, entity/field/relationship/record services)
+builder.Services.AddXrmCore("Data Source=xrm.db");
+builder.Services.AddXrmSeeder<DemoDataSeeder>();
 
 // API Controllers (thin wrappers for external consumers)
 builder.Services.AddControllers()
