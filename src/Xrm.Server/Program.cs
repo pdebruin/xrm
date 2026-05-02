@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Xrm.Blazor.Components;
 using Xrm.Core;
 using Xrm.Core.Data;
+using Xrm.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xrm.Core.Data;
 using Xrm.Core.Services;
+using Xrm.Server;
 
 namespace Xrm.Tests.Infrastructure;
 

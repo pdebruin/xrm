@@ -1,8 +1,9 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Xrm.Core.Data;
 using Xrm.Core.Models;
 
-namespace Xrm.Core.Data;
+namespace Xrm.Server;
 
 public class DemoDataSeeder : IDataSeeder
 {

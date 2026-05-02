@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Xrm.Core.Models;
 using Xrm.Core.Services;
 
-namespace Xrm.Server.Controllers;
+namespace Xrm.Core.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
