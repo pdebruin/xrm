@@ -34,6 +34,13 @@ else
             @if (_isNew) { <span>New @(_entityDef.DisplayName ?? _entityDef.Name)</span> }
             else { <span>@(_entityDef.DisplayName ?? _entityDef.Name)</span> }
         </h3>
+        @if (!_isNew)
+        {
+            <div class="ms-auto">
+                <button class="btn btn-sm btn-outline-secondary" disabled="@(_prevRecordId is null)" @onclick="GoPrev">←</button>
+                <button class="btn btn-sm btn-outline-secondary" disabled="@(_nextRecordId is null)" @onclick="GoNext">→</button>
+            </div>
+        }
     </div>
 
     @if (!_isNew && !_editing)
@@ -400,6 +407,10 @@ else
 @code {
     [Parameter] public Guid EntityId { get; set; }
     [Parameter] public Guid? RecordId { get; set; }
+    [SupplyParameterFromQuery(Name = "sort")] public string? QSort { get; set; }
+    [SupplyParameterFromQuery(Name = "dir")] public string? QDir { get; set; }
+    [SupplyParameterFromQuery(Name = "filter")] public string? QFilter { get; set; }
+    [SupplyParameterFromQuery(Name = "page")] public int? QPage { get; set; }
 
     private bool _isNew => RecordId is null;
     private bool _saving;
@@ -425,6 +436,10 @@ else
     private Guid? _editingChildId;
     private Dictionary<string, object?> _childEditData = new();
     private string? _childEditError;
+
+    // Record navigation
+    private Guid? _prevRecordId;
+    private Guid? _nextRecordId;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -475,7 +490,34 @@ else
             {
                 await LoadChildSection(rel);
             }
+
+            // Load prev/next for record navigation
+            await LoadRecordNavigation();
         }
+    }
+
+    private async Task LoadRecordNavigation()
+    {
+        _prevRecordId = null;
+        _nextRecordId = null;
+        if (RecordId is null) return;
+
+        // Load all record IDs with same sort/filter context
+        var result = await RecordService.GetAllAsync(EntityId, QPage ?? 1, 1000,
+            string.IsNullOrEmpty(QSort) ? null : QSort,
+            string.IsNullOrEmpty(QDir) ? "asc" : QDir,
+            string.IsNullOrEmpty(QFilter) ? null : QFilter);
+
+        var ids = result.Records.Select(r => r.Id).ToList();
+        var idx = ids.IndexOf(RecordId.Value);
+        if (idx > 0) _prevRecordId = ids[idx - 1];
+        if (idx >= 0 && idx < ids.Count - 1) _nextRecordId = ids[idx + 1];
+    }
+
+    private string BuildNavUrl(Guid recordId)
+    {
+        var qs = $"?sort={Uri.EscapeDataString(QSort ?? "")}&dir={QDir ?? "asc"}&filter={Uri.EscapeDataString(QFilter ?? "")}&page={QPage ?? 1}";
+        return $"records/{EntityId}/{recordId}{qs}";
     }
 
     private string GetValue(string fieldName)
@@ -644,6 +686,8 @@ else
     }
 
     private void GoBack() => Nav.NavigateTo($"records/{EntityId}");
+    private void GoPrev() { if (_prevRecordId is not null) Nav.NavigateTo(BuildNavUrl(_prevRecordId.Value)); }
+    private void GoNext() { if (_nextRecordId is not null) Nav.NavigateTo(BuildNavUrl(_nextRecordId.Value)); }
     private void CancelEdit() => _editing = false;
 
     private void NavigateToParent(RelationshipDefinition rel)
