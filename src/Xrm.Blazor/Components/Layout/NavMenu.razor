@@ -18,18 +18,29 @@
             </NavLink>
         </div>
 
-        <h6 class="nav-heading px-3 mt-3 mb-1 text-uppercase">Entities</h6>
-
         @if (_entities is not null)
         {
-            @foreach (var entity in _entities)
+            var grouped = _entities.GroupBy(e => e.Domain ?? "").OrderBy(g => g.Key);
+            @foreach (var group in grouped)
             {
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="@($"records/{entity.Id}")">
-                        <span class="bi bi-table-nav-menu" aria-hidden="true"></span>
-                        @(entity.DisplayName ?? entity.Name)
-                    </NavLink>
-                </div>
+                @if (!string.IsNullOrEmpty(group.Key))
+                {
+                    <h6 class="nav-heading px-3 mt-3 mb-1 text-uppercase">@group.Key</h6>
+                }
+                else if (grouped.Count() > 1)
+                {
+                    <h6 class="nav-heading px-3 mt-3 mb-1 text-uppercase">General</h6>
+                }
+
+                @foreach (var entity in group)
+                {
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="@($"records/{entity.Id}")">
+                            <span class="bi bi-table-nav-menu" aria-hidden="true"></span>
+                            @(entity.DisplayName ?? entity.Name)
+                        </NavLink>
+                    </div>
+                }
             }
         }
 

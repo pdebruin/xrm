@@ -16,32 +16,38 @@ public class DemoDataSeeder : IDataSeeder
         var company = new EntityDefinition
         {
             Id = Guid.NewGuid(), Name = "Company", DisplayName = "Company", PluralName = "Companies",
-            Description = "Organizations and businesses", Icon = "building", IsHomeEntity = true, SortOrder = 1
+            Description = "Organizations and businesses", Icon = "building", IsHomeEntity = true, SortOrder = 1,
+            Domain = "Sales", DomainSortOrder = 1
         };
         var contact = new EntityDefinition
         {
             Id = Guid.NewGuid(), Name = "Contact", DisplayName = "Contact", PluralName = "Contacts",
-            Description = "People and individuals", Icon = "person", SortOrder = 2
+            Description = "People and individuals", Icon = "person", SortOrder = 2,
+            Domain = "Sales", DomainSortOrder = 2
         };
         var product = new EntityDefinition
         {
             Id = Guid.NewGuid(), Name = "Product", DisplayName = "Product", PluralName = "Products",
-            Description = "Products and services offered", Icon = "box", SortOrder = 3
+            Description = "Products and services offered", Icon = "box", SortOrder = 3,
+            Domain = "Catalog", DomainSortOrder = 1
         };
         var activity = new EntityDefinition
         {
             Id = Guid.NewGuid(), Name = "Activity", DisplayName = "Activity", PluralName = "Activities",
-            Description = "Calls, meetings, tasks", Icon = "calendar", SortOrder = 4
+            Description = "Calls, meetings, tasks", Icon = "calendar", SortOrder = 4,
+            Domain = "Sales", DomainSortOrder = 3
         };
         var order = new EntityDefinition
         {
             Id = Guid.NewGuid(), Name = "Order", DisplayName = "Order", PluralName = "Orders",
-            Description = "Sales orders", Icon = "cart", SortOrder = 5
+            Description = "Sales orders", Icon = "cart", SortOrder = 5,
+            Domain = "Orders", DomainSortOrder = 1
         };
         var orderLine = new EntityDefinition
         {
             Id = Guid.NewGuid(), Name = "OrderLine", DisplayName = "Order Line", PluralName = "Order Lines",
-            Description = "Individual line items in an order", Icon = "list", SortOrder = 6
+            Description = "Individual line items in an order", Icon = "list", SortOrder = 6,
+            Domain = "Orders", DomainSortOrder = 2
         };
 
         db.EntityDefinitions.AddRange(company, contact, product, activity, order, orderLine);

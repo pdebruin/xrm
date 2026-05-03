@@ -76,6 +76,10 @@ else
                         <label class="form-label">Description</label>
                         <textarea class="form-control" @bind="_form.Description"></textarea>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Domain (grouping)</label>
+                        <input class="form-control" @bind="_form.Domain" placeholder="e.g. Sales, Orders, Catalog" />
+                    </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" @bind="_form.IsHomeEntity" />
                         <label class="form-check-label">Home Entity (start-up screen)</label>
@@ -134,6 +138,7 @@ else
             DisplayName = _editingEntity.DisplayName ?? "",
             PluralName = _editingEntity.PluralName ?? "",
             Description = _editingEntity.Description ?? "",
+            Domain = _editingEntity.Domain ?? "",
             IsHomeEntity = _editingEntity.IsHomeEntity,
             PrimaryFieldId = _editingEntity.PrimaryFieldId?.ToString() ?? ""
         };
@@ -151,6 +156,7 @@ else
                 _editingEntity.DisplayName = _form.DisplayName;
                 _editingEntity.PluralName = _form.PluralName;
                 _editingEntity.Description = _form.Description;
+                _editingEntity.Domain = string.IsNullOrWhiteSpace(_form.Domain) ? null : _form.Domain.Trim();
                 _editingEntity.IsHomeEntity = _form.IsHomeEntity;
                 _editingEntity.PrimaryFieldId = Guid.TryParse(_form.PrimaryFieldId, out var pfId) ? pfId : null;
                 await EntityService.UpdateAsync(_editingEntity.Id, _editingEntity);
@@ -163,6 +169,7 @@ else
                     DisplayName = _form.DisplayName,
                     PluralName = _form.PluralName,
                     Description = _form.Description,
+                    Domain = string.IsNullOrWhiteSpace(_form.Domain) ? null : _form.Domain.Trim(),
                     IsHomeEntity = _form.IsHomeEntity
                 };
                 await EntityService.CreateAsync(entity);
@@ -197,6 +204,7 @@ else
         public string DisplayName { get; set; } = "";
         public string PluralName { get; set; } = "";
         public string Description { get; set; } = "";
+        public string Domain { get; set; } = "";
         public bool IsHomeEntity { get; set; }
         public string PrimaryFieldId { get; set; } = "";
     }

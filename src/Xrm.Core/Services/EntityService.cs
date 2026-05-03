@@ -19,7 +19,9 @@ public class EntityService : IEntityService
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         return await db.EntityDefinitions
-            .OrderBy(e => e.SortOrder)
+            .OrderBy(e => e.Domain ?? "")
+            .ThenBy(e => e.DomainSortOrder ?? e.SortOrder)
+            .ThenBy(e => e.SortOrder)
             .ThenBy(e => e.Name)
             .ToListAsync();
     }
@@ -72,6 +74,8 @@ public class EntityService : IEntityService
         existing.Icon = entity.Icon;
         existing.IsHomeEntity = entity.IsHomeEntity;
         existing.SortOrder = entity.SortOrder;
+        existing.Domain = entity.Domain;
+        existing.DomainSortOrder = entity.DomainSortOrder;
         existing.PrimaryFieldId = entity.PrimaryFieldId;
 
         await db.SaveChangesAsync();

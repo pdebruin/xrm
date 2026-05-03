@@ -14,6 +14,17 @@ public class EntityDefinition
     public int SortOrder { get; set; }
 
     /// <summary>
+    /// Optional grouping label for UI navigation and authorization scoping.
+    /// Entities with the same Domain are displayed together in the nav menu.
+    /// </summary>
+    public string? Domain { get; set; }
+
+    /// <summary>
+    /// Sort order within a domain group. If null, falls back to SortOrder.
+    /// </summary>
+    public int? DomainSortOrder { get; set; }
+
+    /// <summary>
     /// The field used as the display label for records of this entity (e.g. in dropdowns, relationship grids).
     /// If null, falls back to the first field by SortOrder.
     /// </summary>
