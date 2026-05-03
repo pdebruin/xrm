@@ -15,13 +15,20 @@ public class RecordService : IRecordService
         await using var db = await _dbFactory.CreateDbContextAsync();
         var query = db.Records.Where(r => r.EntityDefinitionId == entityId);
 
-        // Server-side filter on JSON content
+        // When filtering, we must materialize and filter client-side on JSON values only (case-insensitive)
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            query = query.Where(r => r.DataJson.Contains(filter));
+            var all = await query.ToListAsync();
+            var filtered = all.Where(r => MatchesFilter(r.DataJson, filter)).ToList();
+            var total = filtered.Count;
+            var sorted = string.IsNullOrEmpty(sortField)
+                ? (sortDir == "desc" ? filtered.OrderByDescending(r => r.CreatedAt) : filtered.OrderBy(r => r.CreatedAt)).ToList()
+                : SortByJsonField(filtered, sortField, sortDir);
+            var paged = sorted.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            return new RecordPage(paged, total, page, pageSize);
         }
 
-        var total = await query.CountAsync();
+        var totalCount = await query.CountAsync();
 
         // If sorting by a field, we need to materialize and sort client-side
         // since values are stored inside JSON. For default/no field, sort by CreatedAt.
@@ -35,7 +42,7 @@ public class RecordService : IRecordService
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
-            return new RecordPage(records, total, page, pageSize);
+            return new RecordPage(records, totalCount, page, pageSize);
         }
         else
         {
@@ -43,7 +50,7 @@ public class RecordService : IRecordService
             var all = await query.ToListAsync();
             var sorted = SortByJsonField(all, sortField, sortDir);
             var paged = sorted.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-            return new RecordPage(paged, total, page, pageSize);
+            return new RecordPage(paged, totalCount, page, pageSize);
         }
     }
 
@@ -53,6 +60,30 @@ public class RecordService : IRecordService
             ? records.OrderByDescending(r => ExtractSortKey(r.DataJson, fieldName))
             : records.OrderBy(r => ExtractSortKey(r.DataJson, fieldName))
         ).ToList();
+    }
+
+    private static bool MatchesFilter(string dataJson, string filter)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(dataJson);
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                var value = prop.Value.ValueKind switch
+                {
+                    System.Text.Json.JsonValueKind.String => prop.Value.GetString(),
+                    System.Text.Json.JsonValueKind.Number => prop.Value.GetRawText(),
+                    System.Text.Json.JsonValueKind.True => "true",
+                    System.Text.Json.JsonValueKind.False => "false",
+                    System.Text.Json.JsonValueKind.Array => prop.Value.GetRawText(),
+                    _ => null
+                };
+                if (value != null && value.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch { }
+        return false;
     }
 
     private static IComparable ExtractSortKey(string dataJson, string fieldName)
