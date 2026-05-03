@@ -10,8 +10,13 @@ namespace Xrm.Core.Controllers;
 public class RecordsController : ControllerBase
 {
     private readonly IRecordService _records;
+    private readonly IAuditService _audit;
 
-    public RecordsController(IRecordService records) => _records = records;
+    public RecordsController(IRecordService records, IAuditService audit)
+    {
+        _records = records;
+        _audit = audit;
+    }
 
     [HttpGet]
     public async Task<ActionResult<RecordPageDto>> GetAll(
@@ -91,6 +96,13 @@ public class RecordsController : ControllerBase
         var deleted = await _records.DeleteLinkAsync(linkId);
         if (!deleted) return NotFound();
         return NoContent();
+    }
+
+    [HttpGet("{id:guid}/history")]
+    public async Task<ActionResult<List<AuditEntry>>> GetHistory(Guid entityId, Guid id, [FromQuery] int limit = 50)
+    {
+        var entries = await _audit.GetHistoryAsync(id, limit);
+        return entries;
     }
 }
 
