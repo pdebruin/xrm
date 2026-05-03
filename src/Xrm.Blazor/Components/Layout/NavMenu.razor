@@ -41,7 +41,6 @@
                         {
                             <div class="nav-item px-3">
                                 <NavLink class="nav-link" href="@($"records/{entity.Id}")">
-                                    <span class="bi bi-table-nav-menu" aria-hidden="true"></span>
                                     @(entity.DisplayName ?? entity.Name)
                                 </NavLink>
                             </div>
@@ -54,7 +53,6 @@
                     {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="@($"records/{entity.Id}")">
-                                <span class="bi bi-table-nav-menu" aria-hidden="true"></span>
                                 @(entity.DisplayName ?? entity.Name)
                             </NavLink>
                         </div>
