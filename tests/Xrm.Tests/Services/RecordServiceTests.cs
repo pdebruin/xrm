@@ -435,4 +435,55 @@ public class RecordServiceTests : ServiceTestBase
 
         Assert.Equal(new[] { 1, 2, 10 }, scores);
     }
+
+    [Fact]
+    public async Task LifecycleHandler_OnCreating_CanModifyData()
+    {
+        var entityId = await CreateEntityWithFieldsAsync();
+        var handler = new TestLifecycleHandler();
+        var svc = new Xrm.Core.Services.RecordService(DbFactory, new[] { handler });
+
+        var record = await svc.CreateAsync(entityId, """{"Name":"Original"}""");
+
+        Assert.Equal("OnCreating called", handler.LastEvent);
+        // Handler prepended a field
+        using var doc = JsonDocument.Parse(record.DataJson);
+        Assert.True(doc.RootElement.TryGetProperty("_hook", out _));
+    }
+
+    [Fact]
+    public async Task LifecycleHandler_OnUpdated_ReceivesOldData()
+    {
+        var entityId = await CreateEntityWithFieldsAsync();
+        var handler = new TestLifecycleHandler();
+        var svc = new Xrm.Core.Services.RecordService(DbFactory, new[] { handler });
+
+        var record = await svc.CreateAsync(entityId, """{"Name":"V1"}""");
+        await svc.UpdateAsync(entityId, record.Id, """{"Name":"V2"}""");
+
+        Assert.Equal("OnUpdated called", handler.LastEvent);
+        Assert.Contains("V1", handler.LastOldDataJson);
+    }
+
+    private class TestLifecycleHandler : Xrm.Core.Services.IRecordLifecycleHandler
+    {
+        public string? LastEvent { get; private set; }
+        public string? LastOldDataJson { get; private set; }
+
+        public Task<string> OnCreatingAsync(Guid entityId, string dataJson, EntityDefinition entity, CancellationToken ct = default)
+        {
+            LastEvent = "OnCreating called";
+            // Inject a marker field
+            var obj = JsonSerializer.Deserialize<Dictionary<string, object>>(dataJson)!;
+            obj["_hook"] = "injected";
+            return Task.FromResult(JsonSerializer.Serialize(obj));
+        }
+
+        public Task OnUpdatedAsync(Xrm.Core.Models.Record record, string oldDataJson, EntityDefinition entity, CancellationToken ct = default)
+        {
+            LastEvent = "OnUpdated called";
+            LastOldDataJson = oldDataJson;
+            return Task.CompletedTask;
+        }
+    }
 }

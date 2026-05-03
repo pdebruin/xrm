@@ -7,8 +7,13 @@ namespace Xrm.Core.Services;
 public class RecordService : IRecordService
 {
     private readonly IDbContextFactory<XrmDbContext> _dbFactory;
+    private readonly IEnumerable<IRecordLifecycleHandler> _lifecycleHandlers;
 
-    public RecordService(IDbContextFactory<XrmDbContext> dbFactory) => _dbFactory = dbFactory;
+    public RecordService(IDbContextFactory<XrmDbContext> dbFactory, IEnumerable<IRecordLifecycleHandler> lifecycleHandlers)
+    {
+        _dbFactory = dbFactory;
+        _lifecycleHandlers = lifecycleHandlers;
+    }
 
     public async Task<RecordPage> GetAllAsync(Guid entityId, int page = 1, int pageSize = 25, string? sortField = null, string sortDir = "asc", string? filter = null)
     {
@@ -117,10 +122,17 @@ public class RecordService : IRecordService
     public async Task<Record> CreateAsync(Guid entityId, string dataJson)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
+        var entity = await db.EntityDefinitions.FindAsync(entityId)
+            ?? throw new InvalidOperationException($"Entity {entityId} not found");
+
         await ValidateRecordData(db, entityId, dataJson);
 
         // Generate AutoNumber values
         dataJson = await ApplyAutoNumbers(db, entityId, dataJson);
+
+        // Pre-save hook
+        foreach (var handler in _lifecycleHandlers)
+            dataJson = await handler.OnCreatingAsync(entityId, dataJson, entity);
 
         var record = new Record
         {
@@ -141,6 +153,11 @@ public class RecordService : IRecordService
         });
 
         await db.SaveChangesAsync();
+
+        // Post-save hook
+        foreach (var handler in _lifecycleHandlers)
+            await handler.OnCreatedAsync(record, entity);
+
         return record;
     }
 
@@ -151,8 +168,16 @@ public class RecordService : IRecordService
             .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId);
         if (record is null) return false;
 
+        var entity = await db.EntityDefinitions.FindAsync(entityId)
+            ?? throw new InvalidOperationException($"Entity {entityId} not found");
+
         await ValidateRecordData(db, entityId, dataJson);
         var oldDataJson = record.DataJson;
+
+        // Pre-save hook
+        foreach (var handler in _lifecycleHandlers)
+            dataJson = await handler.OnUpdatingAsync(record, dataJson, entity);
+
         record.DataJson = dataJson;
 
         db.AuditEntries.Add(new AuditEntry
@@ -167,6 +192,11 @@ public class RecordService : IRecordService
         });
 
         await db.SaveChangesAsync();
+
+        // Post-save hook
+        foreach (var handler in _lifecycleHandlers)
+            await handler.OnUpdatedAsync(record, oldDataJson, entity);
+
         return true;
     }
 
@@ -258,6 +288,13 @@ public class RecordService : IRecordService
         var record = await db.Records
             .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId);
         if (record is null) return false;
+
+        var entity = await db.EntityDefinitions.FindAsync(entityId)
+            ?? throw new InvalidOperationException($"Entity {entityId} not found");
+
+        // Pre-delete hook
+        foreach (var handler in _lifecycleHandlers)
+            await handler.OnDeletingAsync(record, entity);
 
         // Remove associated links
         var links = await db.RecordLinks
