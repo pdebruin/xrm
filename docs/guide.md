@@ -56,10 +56,10 @@ card to manage them.
 Field properties:
 - **Name** — identifier used in the JSON data store
 - **Display Name** — label shown in the UI
-- **Data Type** — Text, Number, Decimal, Boolean, Date, DateTime, Choice, RichText, Email, Phone, URL
+- **Data Type** — Text, Number, Decimal, Boolean, Date, DateTime, Choice, MultiChoice, AutoNumber, RichText, Email, Phone, URL
 - **Required** — marked with a red asterisk (*) in the form; validated on save
 - **Constraints** — max length, min/max value, regex pattern
-- **Options** — for Choice fields, a list of allowed values (e.g. `["Low","Medium","High"]`)
+- **Options** — for Choice/MultiChoice fields, a list of allowed values (e.g. `["Low","Medium","High"]`)
 - **Sort Order** — controls the display order of fields in the form and grid
 
 Fields are enforced at runtime: required fields must have a value, text respects
@@ -74,7 +74,7 @@ not database foreign keys.
 
 To create a relationship:
 1. Click **+ New Relationship** on the Relationships page
-2. Select a **Source Entity** (the parent / "one" side) and **Target Entity** (the child / "many" side)
+2. Select a **Parent Entity** (the "one" side) and **Child Entity** (the "many" side)
 3. Choose a **Name** (e.g. `Company → Contacts`)
 4. Currently supported: **OneToMany** relationship type, with **None** or **RemoveLink** on delete
 
@@ -119,6 +119,8 @@ based on their data type:
 | Boolean | Checkbox |
 | Date, DateTime | Date/time picker |
 | Choice | Dropdown with defined options |
+| MultiChoice | Checkbox group (multiple selections stored as JSON array) |
+| AutoNumber | Read-only auto-generated value (see [autonumber.md](autonumber.md)) |
 | RichText | Textarea |
 
 Required fields are marked with a red asterisk (*) and validated on save.
@@ -206,5 +208,34 @@ Demo data can be modified or deleted like any user-created content.
 | Frontend | Blazor Server (interactive SSR) |
 | Database | SQLite via EF Core |
 | Data model | Fixed meta-schema with JSON field values |
-| Tests | xUnit + WebApplicationFactory (40 tests) |
+| Tests | xUnit + WebApplicationFactory (83 tests) |
 | API docs | Swagger / OpenAPI |
+
+---
+
+## Domain Grouping
+
+Entities can be assigned a **Domain** (e.g. "Sales", "Catalog", "Orders") in the
+Entity Designer. The side navigation groups entities by domain with collapsible
+headings. Entities without a domain appear ungrouped.
+
+Set **Domain Sort Order** to control the order of groups in the nav menu.
+
+---
+
+## Audit Trail
+
+All record changes (create, update, delete) are automatically logged. On the record
+detail screen, expand the **History** section to see a timeline of changes with:
+- Timestamp and action type
+- Who made the change (user ID)
+- Field-level before → after values for updates
+
+No configuration needed — audit is always on.
+
+---
+
+## Lifecycle Hooks
+
+Consumer applications can hook into record create/update/delete events to run
+business logic. See [lifecycle-hooks.md](lifecycle-hooks.md) for the full guide.
