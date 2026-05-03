@@ -93,6 +93,11 @@ else
                                    readonly placeholder="(auto-generated)" />
                             break;
 
+                        case FieldDataType.Computed:
+                            <input type="text" class="form-control" value="@DisplayFormatter.FormatValue(GetValue(field.Name), FieldDataType.Decimal)" 
+                                   readonly placeholder="(computed)" />
+                            break;
+
                         case FieldDataType.Boolean:
                             <div class="form-check">
                                 <input type="checkbox" class="form-check-input" 

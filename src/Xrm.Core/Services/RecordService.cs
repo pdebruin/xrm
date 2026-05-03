@@ -20,10 +20,16 @@ public class RecordService : IRecordService
         await using var db = await _dbFactory.CreateDbContextAsync();
         var query = db.Records.Where(r => r.EntityDefinitionId == entityId);
 
+        var computedFields = await db.FieldDefinitions
+            .Where(f => f.EntityDefinitionId == entityId && f.DataType == FieldDataType.Computed)
+            .ToListAsync();
+
         // When filtering, we must materialize and filter client-side on JSON values only (case-insensitive)
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var all = await query.ToListAsync();
+            if (computedFields.Count > 0)
+                foreach (var r in all) r.DataJson = await ApplyComputedFieldsAsync(r.DataJson, computedFields, db, r.Id);
             var filtered = all.Where(r => MatchesFilter(r.DataJson, filter)).ToList();
             var total = filtered.Count;
             var sorted = string.IsNullOrEmpty(sortField)
@@ -47,16 +53,133 @@ public class RecordService : IRecordService
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+            if (computedFields.Count > 0)
+                foreach (var r in records) r.DataJson = await ApplyComputedFieldsAsync(r.DataJson, computedFields, db, r.Id);
             return new RecordPage(records, totalCount, page, pageSize);
         }
         else
         {
             // Materialize all matching records, sort by JSON field value, then page
             var all = await query.ToListAsync();
+            if (computedFields.Count > 0)
+                foreach (var r in all) r.DataJson = await ApplyComputedFieldsAsync(r.DataJson, computedFields, db, r.Id);
             var sorted = SortByJsonField(all, sortField, sortDir);
             var paged = sorted.Skip((page - 1) * pageSize).Take(pageSize).ToList();
             return new RecordPage(paged, totalCount, page, pageSize);
         }
+    }
+
+    private static async Task<string> ApplyComputedFieldsAsync(string dataJson, List<FieldDefinition> computedFields, XrmDbContext? db, Guid recordId)
+    {
+        try
+        {
+            var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(dataJson) ?? new();
+            var writable = new Dictionary<string, object?>();
+            foreach (var kvp in data) writable[kvp.Key] = kvp.Value;
+
+            foreach (var field in computedFields)
+            {
+                if (string.IsNullOrEmpty(field.Expression)) continue;
+
+                var expression = field.Expression;
+
+                // Resolve aggregate functions (COUNT, SUM) if database context available
+                if (db is not null && (expression.Contains("COUNT(") || expression.Contains("SUM(")))
+                    expression = await ResolveAggregates(expression, db, recordId);
+
+                var result = ExpressionEvaluator.Evaluate(expression, data);
+                if (result.HasValue)
+                    writable[field.Name] = Math.Round(result.Value, 10);
+            }
+
+            return System.Text.Json.JsonSerializer.Serialize(writable);
+        }
+        catch
+        {
+            return dataJson;
+        }
+    }
+
+    private static async Task<string> ResolveAggregates(string expression, XrmDbContext db, Guid recordId)
+    {
+        // Pattern: COUNT(EntityName) or SUM(EntityName.FieldName)
+        var result = expression;
+
+        // Resolve COUNT(EntityName)
+        var countPattern = new System.Text.RegularExpressions.Regex(@"COUNT\((\w+)\)");
+        foreach (System.Text.RegularExpressions.Match match in countPattern.Matches(expression))
+        {
+            var entityName = match.Groups[1].Value;
+            var count = await GetChildRecordCount(db, recordId, entityName);
+            result = result.Replace(match.Value, count.ToString());
+        }
+
+        // Resolve SUM(EntityName.FieldName)
+        var sumPattern = new System.Text.RegularExpressions.Regex(@"SUM\((\w+)\.(\w+)\)");
+        foreach (System.Text.RegularExpressions.Match match in sumPattern.Matches(expression))
+        {
+            var entityName = match.Groups[1].Value;
+            var fieldName = match.Groups[2].Value;
+            var sum = await GetChildRecordSum(db, recordId, entityName, fieldName);
+            result = result.Replace(match.Value, sum.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        return result;
+    }
+
+    private static async Task<int> GetChildRecordCount(XrmDbContext db, Guid parentRecordId, string childEntityName)
+    {
+        var childEntity = await db.EntityDefinitions.FirstOrDefaultAsync(e => e.Name == childEntityName);
+        if (childEntity is null) return 0;
+
+        var relationship = await db.RelationshipDefinitions
+            .FirstOrDefaultAsync(r => r.ChildEntityId == childEntity.Id);
+        if (relationship is null) return 0;
+
+        return await db.RecordLinks
+            .Where(rl => rl.RelationshipDefinitionId == relationship.Id && rl.ParentRecordId == parentRecordId)
+            .CountAsync();
+    }
+
+    private static async Task<double> GetChildRecordSum(XrmDbContext db, Guid parentRecordId, string childEntityName, string fieldName)
+    {
+        var childEntity = await db.EntityDefinitions.FirstOrDefaultAsync(e => e.Name == childEntityName);
+        if (childEntity is null) return 0;
+
+        var relationship = await db.RelationshipDefinitions
+            .FirstOrDefaultAsync(r => r.ChildEntityId == childEntity.Id);
+        if (relationship is null) return 0;
+
+        var childRecordIds = await db.RecordLinks
+            .Where(rl => rl.RelationshipDefinitionId == relationship.Id && rl.ParentRecordId == parentRecordId)
+            .Select(rl => rl.ChildRecordId)
+            .ToListAsync();
+
+        if (childRecordIds.Count == 0) return 0;
+
+        var records = await db.Records
+            .Where(r => childRecordIds.Contains(r.Id))
+            .ToListAsync();
+
+        double sum = 0;
+        foreach (var record in records)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(record.DataJson);
+                if (doc.RootElement.TryGetProperty(fieldName, out var val))
+                {
+                    if (val.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        sum += val.GetDouble();
+                    else if (val.ValueKind == System.Text.Json.JsonValueKind.String &&
+                             double.TryParse(val.GetString(), System.Globalization.NumberStyles.Any,
+                                 System.Globalization.CultureInfo.InvariantCulture, out var n))
+                        sum += n;
+                }
+            }
+            catch { }
+        }
+        return sum;
     }
 
     private static List<Record> SortByJsonField(List<Record> records, string fieldName, string dir)
@@ -115,8 +238,17 @@ public class RecordService : IRecordService
     public async Task<Record?> GetByIdAsync(Guid entityId, Guid id)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
-        return await db.Records
+        var record = await db.Records
             .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId);
+        if (record is null) return null;
+
+        var computedFields = await db.FieldDefinitions
+            .Where(f => f.EntityDefinitionId == entityId && f.DataType == FieldDataType.Computed)
+            .ToListAsync();
+        if (computedFields.Count > 0)
+            record.DataJson = await ApplyComputedFieldsAsync(record.DataJson, computedFields, db, record.Id);
+
+        return record;
     }
 
     public async Task<SaveResult> CreateAsync(Guid entityId, string dataJson)
@@ -233,8 +365,8 @@ public class RecordService : IRecordService
 
         foreach (var field in fields)
         {
-            // AutoNumber fields are system-generated; skip validation
-            if (field.DataType == FieldDataType.AutoNumber) continue;
+            // AutoNumber and Computed fields are system-generated; skip validation
+            if (field.DataType == FieldDataType.AutoNumber || field.DataType == FieldDataType.Computed) continue;
 
             var hasValue = data.TryGetValue(field.Name, out var val)
                 && val.ValueKind != System.Text.Json.JsonValueKind.Null

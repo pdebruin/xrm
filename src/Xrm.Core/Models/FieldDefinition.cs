@@ -32,6 +32,12 @@ public class FieldDefinition
     /// </summary>
     public string? TransitionsJson { get; set; }
 
+    /// <summary>
+    /// Expression for Computed fields. References other field names and supports +, -, *, /, parentheses.
+    /// Example: "NettoHuur + Servicekosten" or "Prijs * 1.21"
+    /// </summary>
+    public string? Expression { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = "system";
     public DateTime ModifiedAt { get; set; }

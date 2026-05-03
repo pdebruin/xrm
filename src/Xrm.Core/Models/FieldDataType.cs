@@ -14,5 +14,6 @@ public enum FieldDataType
     Email,
     Phone,
     Url,
-    AutoNumber
+    AutoNumber,
+    Computed
 }

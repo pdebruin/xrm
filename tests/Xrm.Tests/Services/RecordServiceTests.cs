@@ -667,6 +667,168 @@ public class RecordServiceTests : ServiceTestBase
         Assert.Contains("Actual hours cannot exceed budget", ex.Message);
     }
 
+    [Fact]
+    public async Task ComputedField_SimpleAddition()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "Invoice" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "NetAmount", DataType = FieldDataType.Decimal, SortOrder = 1 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "ServiceCharge", DataType = FieldDataType.Decimal, SortOrder = 2 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Total", DataType = FieldDataType.Computed, Expression = "NetAmount + ServiceCharge", SortOrder = 3
+        });
+
+        var recSvc = CreateRecordService();
+        var result = await recSvc.CreateAsync(entity.Id, """{"NetAmount":1000,"ServiceCharge":150}""");
+        Assert.True(result.Success);
+
+        var record = await recSvc.GetByIdAsync(entity.Id, result.Record!.Id);
+        var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(record!.DataJson)!;
+        Assert.Equal(1150, data["Total"].GetDouble());
+    }
+
+    [Fact]
+    public async Task ComputedField_MultiplyWithLiteral()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "PriceCalc" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "Netto", DataType = FieldDataType.Decimal, SortOrder = 1 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Bruto", DataType = FieldDataType.Computed, Expression = "Netto * 1.21", SortOrder = 2
+        });
+
+        var recSvc = CreateRecordService();
+        var result = await recSvc.CreateAsync(entity.Id, """{"Netto":100}""");
+
+        var record = await recSvc.GetByIdAsync(entity.Id, result.Record!.Id);
+        var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(record!.DataJson)!;
+        Assert.Equal(121, data["Bruto"].GetDouble());
+    }
+
+    [Fact]
+    public async Task ComputedField_ComplexExpression()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "Budget" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "A", DataType = FieldDataType.Number, SortOrder = 1 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "B", DataType = FieldDataType.Number, SortOrder = 2 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "C", DataType = FieldDataType.Number, SortOrder = 3 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Result", DataType = FieldDataType.Computed, Expression = "(A + B) * C", SortOrder = 4
+        });
+
+        var recSvc = CreateRecordService();
+        var result = await recSvc.CreateAsync(entity.Id, """{"A":10,"B":5,"C":3}""");
+
+        var record = await recSvc.GetByIdAsync(entity.Id, result.Record!.Id);
+        var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(record!.DataJson)!;
+        Assert.Equal(45, data["Result"].GetDouble());
+    }
+
+    [Fact]
+    public async Task ComputedField_AppearsInList()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "ListTest" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "X", DataType = FieldDataType.Number, SortOrder = 1 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Double", DataType = FieldDataType.Computed, Expression = "X * 2", SortOrder = 2
+        });
+
+        var recSvc = CreateRecordService();
+        await recSvc.CreateAsync(entity.Id, """{"X":7}""");
+
+        var page = await recSvc.GetAllAsync(entity.Id);
+        var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(page.Records.First().DataJson)!;
+        Assert.Equal(14, data["Double"].GetDouble());
+    }
+
+    [Fact]
+    public async Task ComputedField_CountAggregate()
+    {
+        var entitySvc = CreateEntityService();
+        var complex = await entitySvc.CreateAsync(new EntityDefinition { Name = "Complex" });
+        var contract = await entitySvc.CreateAsync(new EntityDefinition { Name = "Huurcontract" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(complex.Id, new FieldDefinition { Name = "Naam", DataType = FieldDataType.Text, SortOrder = 1 });
+        await fieldSvc.CreateAsync(complex.Id, new FieldDefinition
+        {
+            Name = "AantalContracten", DataType = FieldDataType.Computed, Expression = "COUNT(Huurcontract)", SortOrder = 2
+        });
+        await fieldSvc.CreateAsync(contract.Id, new FieldDefinition { Name = "Huurder", DataType = FieldDataType.Text, SortOrder = 1 });
+
+        var relSvc = CreateRelationshipService();
+        var rel = await relSvc.CreateAsync(new RelationshipDefinition
+        {
+            Name = "ComplexContracten",
+            ParentEntityId = complex.Id,
+            ChildEntityId = contract.Id,
+            RelationshipType = RelationshipType.OneToMany
+        });
+
+        var recSvc = CreateRecordService();
+        var complexRec = (await recSvc.CreateAsync(complex.Id, """{"Naam":"Blok A"}""")).Record!;
+        var c1 = (await recSvc.CreateAsync(contract.Id, """{"Huurder":"Jan"}""")).Record!;
+        var c2 = (await recSvc.CreateAsync(contract.Id, """{"Huurder":"Piet"}""")).Record!;
+
+        await recSvc.CreateLinkAsync(complexRec.Id, rel.Id, c1.Id);
+        await recSvc.CreateLinkAsync(complexRec.Id, rel.Id, c2.Id);
+
+        var loaded = await recSvc.GetByIdAsync(complex.Id, complexRec.Id);
+        var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(loaded!.DataJson)!;
+        Assert.Equal(2, data["AantalContracten"].GetDouble());
+    }
+
+    [Fact]
+    public async Task ComputedField_SumAggregate()
+    {
+        var entitySvc = CreateEntityService();
+        var complex = await entitySvc.CreateAsync(new EntityDefinition { Name = "Complex2" });
+        var contract = await entitySvc.CreateAsync(new EntityDefinition { Name = "Contract2" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(complex.Id, new FieldDefinition { Name = "Naam", DataType = FieldDataType.Text, SortOrder = 1 });
+        await fieldSvc.CreateAsync(complex.Id, new FieldDefinition
+        {
+            Name = "TotaalHuur", DataType = FieldDataType.Computed, Expression = "SUM(Contract2.Maandhuur)", SortOrder = 2
+        });
+        await fieldSvc.CreateAsync(contract.Id, new FieldDefinition { Name = "Maandhuur", DataType = FieldDataType.Decimal, SortOrder = 1 });
+
+        var relSvc = CreateRelationshipService();
+        var rel = await relSvc.CreateAsync(new RelationshipDefinition
+        {
+            Name = "ComplexContracts2",
+            ParentEntityId = complex.Id,
+            ChildEntityId = contract.Id,
+            RelationshipType = RelationshipType.OneToMany
+        });
+
+        var recSvc = CreateRecordService();
+        var complexRec = (await recSvc.CreateAsync(complex.Id, """{"Naam":"Blok B"}""")).Record!;
+        var c1 = (await recSvc.CreateAsync(contract.Id, """{"Maandhuur":750.50}""")).Record!;
+        var c2 = (await recSvc.CreateAsync(contract.Id, """{"Maandhuur":900}""")).Record!;
+
+        await recSvc.CreateLinkAsync(complexRec.Id, rel.Id, c1.Id);
+        await recSvc.CreateLinkAsync(complexRec.Id, rel.Id, c2.Id);
+
+        var loaded = await recSvc.GetByIdAsync(complex.Id, complexRec.Id);
+        var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(loaded!.DataJson)!;
+        Assert.Equal(1650.5, data["TotaalHuur"].GetDouble());
+    }
+
     private class TestLifecycleHandler : Xrm.Core.Services.IRecordLifecycleHandler
     {
         public string? LastEvent { get; private set; }
