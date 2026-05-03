@@ -21,7 +21,7 @@
 
         @if (_entities is not null)
         {
-            var grouped = _entities.GroupBy(e => e.Domain ?? "").OrderBy(g => g.Key);
+            var grouped = _entities.GroupBy(e => e.Domain ?? "").OrderBy(g => g.Min(e => e.SortOrder));
             var hasMultipleGroups = grouped.Count() > 1;
             @foreach (var group in grouped)
             {
