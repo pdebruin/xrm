@@ -2,6 +2,7 @@
 @using System.Text.Json
 @using Xrm.Core.Models
 @using Xrm.Core.Services
+@using Xrm.Blazor.Helpers
 @inject IEntityService EntityService
 @inject IRecordService RecordService
 @inject NavigationManager Nav
@@ -163,6 +164,7 @@ else
     private string GetDisplayValue(Dictionary<string, JsonElement> data, FieldDefinition field)
     {
         if (!data.TryGetValue(field.Name, out var val)) return "";
-        return val.ValueKind == JsonValueKind.Null ? "" : val.ToString();
+        if (val.ValueKind == JsonValueKind.Null) return "";
+        return DisplayFormatter.FormatValue(val.ToString(), field.DataType);
     }
 }

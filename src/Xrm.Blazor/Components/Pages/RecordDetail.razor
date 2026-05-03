@@ -3,6 +3,7 @@
 @using System.Text.Json
 @using Xrm.Core.Models
 @using Xrm.Core.Services
+@using Xrm.Blazor.Helpers
 @inject IEntityService EntityService
 @inject IRecordService RecordService
 @inject IRelationshipService RelationshipService
@@ -524,9 +525,7 @@ else
         }
         var raw = GetValue(field.Name);
         if (string.IsNullOrEmpty(raw)) return "—";
-        if (field.DataType == FieldDataType.Boolean)
-            return raw.Equals("true", StringComparison.OrdinalIgnoreCase) || raw == "True" ? "Yes" : "No";
-        return raw;
+        return DisplayFormatter.FormatValue(raw, field.DataType);
     }
 
     private string GetParentValue(Guid relId) => _parentValues.TryGetValue(relId, out var v) ? v ?? "" : "";
