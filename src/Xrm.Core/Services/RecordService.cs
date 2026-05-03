@@ -98,6 +98,17 @@ public class RecordService : IRecordService
             DataJson = dataJson
         };
         db.Records.Add(record);
+
+        db.AuditEntries.Add(new AuditEntry
+        {
+            Id = Guid.NewGuid(),
+            EntityDefinitionId = entityId,
+            RecordId = record.Id,
+            Action = "Created",
+            Timestamp = DateTime.UtcNow,
+            NewDataJson = dataJson
+        });
+
         await db.SaveChangesAsync();
         return record;
     }
@@ -110,7 +121,20 @@ public class RecordService : IRecordService
         if (record is null) return false;
 
         await ValidateRecordData(db, entityId, dataJson);
+        var oldDataJson = record.DataJson;
         record.DataJson = dataJson;
+
+        db.AuditEntries.Add(new AuditEntry
+        {
+            Id = Guid.NewGuid(),
+            EntityDefinitionId = entityId,
+            RecordId = id,
+            Action = "Updated",
+            Timestamp = DateTime.UtcNow,
+            OldDataJson = oldDataJson,
+            NewDataJson = dataJson
+        });
+
         await db.SaveChangesAsync();
         return true;
     }
@@ -209,6 +233,17 @@ public class RecordService : IRecordService
             .Where(l => l.ParentRecordId == id || l.ChildRecordId == id)
             .ToListAsync();
         db.RecordLinks.RemoveRange(links);
+
+        db.AuditEntries.Add(new AuditEntry
+        {
+            Id = Guid.NewGuid(),
+            EntityDefinitionId = entityId,
+            RecordId = id,
+            Action = "Deleted",
+            Timestamp = DateTime.UtcNow,
+            OldDataJson = record.DataJson
+        });
+
         db.Records.Remove(record);
         await db.SaveChangesAsync();
         return true;

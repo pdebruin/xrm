@@ -25,6 +25,7 @@ public static class XrmServiceExtensions
         services.AddScoped<IFieldService, FieldService>();
         services.AddScoped<IRelationshipService, RelationshipService>();
         services.AddScoped<IRecordService, RecordService>();
+        services.AddScoped<IAuditService, AuditService>();
 
         return services;
     }

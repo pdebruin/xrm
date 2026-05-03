@@ -6,6 +6,7 @@
 @inject IEntityService EntityService
 @inject IRecordService RecordService
 @inject IRelationshipService RelationshipService
+@inject IAuditService AuditService
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
@@ -322,6 +323,68 @@ else
             </div>
         }
     }
+
+    @if (!_isNew)
+    {
+        <div class="mt-4">
+            <h5 class="mb-3">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleHistory">
+                    @(_showHistory ? "▾" : "▸") History
+                </button>
+            </h5>
+            @if (_showHistory)
+            {
+                @if (_auditEntries.Count == 0)
+                {
+                    <p class="text-muted small">No history available.</p>
+                }
+                else
+                {
+                    <table class="table table-sm small">
+                        <thead>
+                            <tr>
+                                <th>When</th>
+                                <th>Action</th>
+                                <th>User</th>
+                                <th>Changes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in _auditEntries)
+                            {
+                                <tr>
+                                    <td class="text-nowrap">@entry.Timestamp.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>@entry.Action</td>
+                                    <td>@entry.UserId</td>
+                                    <td>
+                                        @if (entry.Action == "Created")
+                                        {
+                                            <span class="text-muted">Record created</span>
+                                        }
+                                        else if (entry.Action == "Deleted")
+                                        {
+                                            <span class="text-muted">Record deleted</span>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var change in GetAuditChanges(entry))
+                                            {
+                                                <div>
+                                                    <strong>@GetFieldLabel(change.Field)</strong>:
+                                                    <span class="text-danger text-decoration-line-through">@Truncate(change.OldValue)</span>
+                                                    → <span class="text-success">@Truncate(change.NewValue)</span>
+                                                </div>
+                                            }
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            }
+        </div>
+    }
 }
 
 @code {
@@ -331,10 +394,12 @@ else
     private bool _isNew => RecordId is null;
     private bool _saving;
     private bool _editing;
+    private bool _showHistory;
     private string? _error;
     private EntityDefinition? _entityDef;
     private List<FieldDefinition> _fields = new();
     private Dictionary<string, object?> _data = new();
+    private List<AuditEntry> _auditEntries = new();
 
     private List<RelationshipDefinition> _parentRelationships = new();
     private List<RelationshipDefinition> _childRelationships = new();
@@ -702,4 +767,52 @@ else
         public List<FieldDefinition> Fields { get; set; } = new();
         public List<Record> Records { get; set; } = new();
     }
+
+    private async Task ToggleHistory()
+    {
+        _showHistory = !_showHistory;
+        if (_showHistory && _auditEntries.Count == 0 && RecordId.HasValue)
+        {
+            _auditEntries = await AuditService.GetHistoryAsync(RecordId.Value);
+        }
+    }
+
+    private record AuditChange(string Field, string OldValue, string NewValue);
+
+    private List<AuditChange> GetAuditChanges(AuditEntry entry)
+    {
+        if (entry.OldDataJson is null || entry.NewDataJson is null) return new();
+
+        try
+        {
+            var oldData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.OldDataJson) ?? new();
+            var newData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.NewDataJson) ?? new();
+            var changes = new List<AuditChange>();
+            foreach (var (key, newVal) in newData)
+            {
+                var newStr = FormatJsonValue(newVal);
+                var oldStr = oldData.TryGetValue(key, out var oldVal) ? FormatJsonValue(oldVal) : "";
+                if (oldStr != newStr)
+                    changes.Add(new AuditChange(key, oldStr, newStr));
+            }
+            return changes;
+        }
+        catch { return new(); }
+    }
+
+    private static string FormatJsonValue(JsonElement el) => el.ValueKind switch
+    {
+        JsonValueKind.Null => "",
+        JsonValueKind.Array => string.Join(", ", el.EnumerateArray().Select(e => e.ToString())),
+        _ => el.ToString()
+    };
+
+    private string GetFieldLabel(string fieldName)
+    {
+        var field = _fields.FirstOrDefault(f => f.Name == fieldName);
+        return field?.DisplayName ?? fieldName;
+    }
+
+    private static string Truncate(string value, int max = 60)
+        => string.IsNullOrEmpty(value) ? "(empty)" : value.Length > max ? value[..max] + "…" : value;
 }

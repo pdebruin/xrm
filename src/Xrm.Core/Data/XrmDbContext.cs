@@ -13,6 +13,7 @@ public class XrmDbContext : DbContext
     public DbSet<Record> Records => Set<Record>();
     public DbSet<RecordLink> RecordLinks => Set<RecordLink>();
     public DbSet<AutoNumberSequence> AutoNumberSequences => Set<AutoNumberSequence>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -100,6 +101,15 @@ public class XrmDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.FieldDefinitionId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AuditEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.RecordId);
+            entity.HasIndex(e => e.Timestamp);
+            entity.Property(e => e.Action).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.UserId).HasMaxLength(200);
         });
     }
 
