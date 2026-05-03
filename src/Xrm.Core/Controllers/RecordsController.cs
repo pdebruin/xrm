@@ -48,15 +48,21 @@ public class RecordsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Record>> Create(Guid entityId, [FromBody] JsonElement data)
     {
-        var record = await _records.CreateAsync(entityId, data.GetRawText());
-        return CreatedAtAction(nameof(Get), new { entityId, id = record.Id }, record);
+        var result = await _records.CreateAsync(entityId, data.GetRawText());
+        if (!result.Success) return BadRequest();
+        var response = CreatedAtAction(nameof(Get), new { entityId, id = result.Record!.Id }, result.Record);
+        if (result.HasWarnings)
+            Response.Headers["X-Warnings"] = string.Join("; ", result.Warnings!);
+        return response;
     }
 
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid entityId, Guid id, [FromBody] JsonElement data)
     {
-        var updated = await _records.UpdateAsync(entityId, id, data.GetRawText());
-        if (!updated) return NotFound();
+        var result = await _records.UpdateAsync(entityId, id, data.GetRawText());
+        if (!result.Success) return NotFound();
+        if (result.HasWarnings)
+            Response.Headers["X-Warnings"] = string.Join("; ", result.Warnings!);
         return NoContent();
     }
 

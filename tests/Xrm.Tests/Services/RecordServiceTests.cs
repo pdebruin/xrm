@@ -26,10 +26,10 @@ public class RecordServiceTests : ServiceTestBase
         var svc = CreateRecordService();
         var json = JsonSerializer.Serialize(new { FirstName = "Alice", LastName = "Smith", Age = 30 });
 
-        var record = await svc.CreateAsync(entityId, json);
+        var result = await svc.CreateAsync(entityId, json);
 
-        Assert.NotEqual(Guid.Empty, record.Id);
-        Assert.Equal(entityId, record.EntityDefinitionId);
+        Assert.NotEqual(Guid.Empty, result.Record!.Id);
+        Assert.Equal(entityId, result.Record!.EntityDefinitionId);
     }
 
     [Fact]
@@ -108,12 +108,12 @@ public class RecordServiceTests : ServiceTestBase
     {
         var entityId = await CreateEntityWithFieldsAsync();
         var svc = CreateRecordService();
-        var record = await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Old" }));
+        var result = await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Old" }));
 
-        var updated = await svc.UpdateAsync(entityId, record.Id, JsonSerializer.Serialize(new { FirstName = "New" }));
+        var updated = (await svc.UpdateAsync(entityId, result.Record!.Id, JsonSerializer.Serialize(new { FirstName = "New" }))).Success;
         Assert.True(updated);
 
-        var loaded = await svc.GetByIdAsync(entityId, record.Id);
+        var loaded = await svc.GetByIdAsync(entityId, result.Record!.Id);
         Assert.Contains("New", loaded!.DataJson);
     }
 
@@ -122,10 +122,10 @@ public class RecordServiceTests : ServiceTestBase
     {
         var entityId = await CreateEntityWithFieldsAsync();
         var svc = CreateRecordService();
-        var record = await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Gone" }));
+        var result = await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Gone" }));
 
-        Assert.True(await svc.DeleteAsync(entityId, record.Id));
-        Assert.Null(await svc.GetByIdAsync(entityId, record.Id));
+        Assert.True(await svc.DeleteAsync(entityId, result.Record!.Id));
+        Assert.Null(await svc.GetByIdAsync(entityId, result.Record!.Id));
     }
 
     [Fact]
@@ -136,17 +136,17 @@ public class RecordServiceTests : ServiceTestBase
         var contact = await entitySvc.CreateAsync(new EntityDefinition { Name = "Contact" });
 
         var relSvc = CreateRelationshipService();
-        var rel = await relSvc.CreateAsync(new RelationshipDefinition
+        var rel = (await relSvc.CreateAsync(new RelationshipDefinition
         {
             Name = "CompanyContacts",
             ParentEntityId = company.Id,
             ChildEntityId = contact.Id,
             RelationshipType = RelationshipType.OneToMany
-        });
+        }));
 
         var recSvc = CreateRecordService();
-        var companyRec = await recSvc.CreateAsync(company.Id, """{"Name":"Acme"}""");
-        var contactRec = await recSvc.CreateAsync(contact.Id, """{"FirstName":"Alice"}""");
+        var companyRec = (await recSvc.CreateAsync(company.Id, """{"Name":"Acme"}""")).Record!;
+        var contactRec = (await recSvc.CreateAsync(contact.Id, """{"FirstName":"Alice"}""")).Record!;
 
         var link = await recSvc.CreateLinkAsync(companyRec.Id, rel.Id, contactRec.Id);
         Assert.NotEqual(Guid.Empty, link.Id);
@@ -170,17 +170,17 @@ public class RecordServiceTests : ServiceTestBase
         var b = await entitySvc.CreateAsync(new EntityDefinition { Name = "B" });
 
         var relSvc = CreateRelationshipService();
-        var rel = await relSvc.CreateAsync(new RelationshipDefinition
+        var rel = (await relSvc.CreateAsync(new RelationshipDefinition
         {
             Name = "AtoB",
             ParentEntityId = a.Id,
             ChildEntityId = b.Id,
             RelationshipType = RelationshipType.OneToMany
-        });
+        }));
 
         var recSvc = CreateRecordService();
-        var recA = await recSvc.CreateAsync(a.Id, """{"Name":"A1"}""");
-        var recB = await recSvc.CreateAsync(b.Id, """{"Name":"B1"}""");
+        var recA = (await recSvc.CreateAsync(a.Id, """{"Name":"A1"}""")).Record!;
+        var recB = (await recSvc.CreateAsync(b.Id, """{"Name":"B1"}""")).Record!;
 
         var link = await recSvc.CreateLinkAsync(recA.Id, rel.Id, recB.Id);
         Assert.True(await recSvc.DeleteLinkAsync(link.Id));
@@ -196,7 +196,7 @@ public class RecordServiceTests : ServiceTestBase
         var a = await entitySvc.CreateAsync(new EntityDefinition { Name = "X" });
 
         var recSvc = CreateRecordService();
-        var recA = await recSvc.CreateAsync(a.Id, """{"Name":"X1"}""");
+        var recA = (await recSvc.CreateAsync(a.Id, """{"Name":"X1"}""")).Record!;
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => recSvc.CreateLinkAsync(recA.Id, Guid.NewGuid(), Guid.NewGuid()));
@@ -211,14 +211,14 @@ public class RecordServiceTests : ServiceTestBase
         var c = await entitySvc.CreateAsync(new EntityDefinition { Name = "LinkC" });
 
         var relSvc = CreateRelationshipService();
-        var rel = await relSvc.CreateAsync(new RelationshipDefinition
+        var rel = (await relSvc.CreateAsync(new RelationshipDefinition
         {
             Name = "AtoB", ParentEntityId = a.Id, ChildEntityId = b.Id, RelationshipType = RelationshipType.OneToMany
-        });
+        }));
 
         var recSvc = CreateRecordService();
-        var recC = await recSvc.CreateAsync(c.Id, """{"Name":"C1"}""");
-        var recB = await recSvc.CreateAsync(b.Id, """{"Name":"B1"}""");
+        var recC = (await recSvc.CreateAsync(c.Id, """{"Name":"C1"}""")).Record!;
+        var recB = (await recSvc.CreateAsync(b.Id, """{"Name":"B1"}""")).Record!;
 
         // recC belongs to entity C, not A (the source entity)
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -292,7 +292,7 @@ public class RecordServiceTests : ServiceTestBase
         });
 
         var recSvc = CreateRecordService();
-        var rec = await recSvc.CreateAsync(entity.Id, """{"Tags":["A","C"]}""");
+        var rec = (await recSvc.CreateAsync(entity.Id, """{"Tags":["A","C"]}""")).Record!;
         Assert.NotNull(rec);
         Assert.Contains("A", rec.DataJson);
         Assert.Contains("C", rec.DataJson);
@@ -348,9 +348,9 @@ public class RecordServiceTests : ServiceTestBase
         });
 
         var recSvc = CreateRecordService();
-        var r1 = await recSvc.CreateAsync(entity.Id, "{}");
-        var r2 = await recSvc.CreateAsync(entity.Id, "{}");
-        var r3 = await recSvc.CreateAsync(entity.Id, "{}");
+        var r1 = (await recSvc.CreateAsync(entity.Id, "{}")).Record!;
+        var r2 = (await recSvc.CreateAsync(entity.Id, "{}")).Record!;
+        var r3 = (await recSvc.CreateAsync(entity.Id, "{}")).Record!;
 
         Assert.Contains("\"TST-001\"", r1.DataJson);
         Assert.Contains("\"TST-002\"", r2.DataJson);
@@ -371,7 +371,7 @@ public class RecordServiceTests : ServiceTestBase
         });
 
         var recSvc = CreateRecordService();
-        var r1 = await recSvc.CreateAsync(entity.Id, "{}");
+        var r1 = (await recSvc.CreateAsync(entity.Id, "{}")).Record!;
         Assert.Contains("\"00001\"", r1.DataJson);
     }
 
@@ -390,7 +390,7 @@ public class RecordServiceTests : ServiceTestBase
 
         // Should not throw even though no value provided and field is "required"
         var recSvc = CreateRecordService();
-        var rec = await recSvc.CreateAsync(entity.Id, "{}");
+        var rec = (await recSvc.CreateAsync(entity.Id, "{}")).Record!;
         Assert.Contains("\"X-001\"", rec.DataJson);
     }
 
@@ -443,11 +443,11 @@ public class RecordServiceTests : ServiceTestBase
         var handler = new TestLifecycleHandler();
         var svc = new Xrm.Core.Services.RecordService(DbFactory, new[] { handler });
 
-        var record = await svc.CreateAsync(entityId, """{"Name":"Original"}""");
+        var result = await svc.CreateAsync(entityId, """{"Name":"Original"}""");
 
         Assert.Equal("OnCreating called", handler.LastEvent);
         // Handler prepended a field
-        using var doc = JsonDocument.Parse(record.DataJson);
+        using var doc = JsonDocument.Parse(result.Record!.DataJson);
         Assert.True(doc.RootElement.TryGetProperty("_hook", out _));
     }
 
@@ -458,8 +458,8 @@ public class RecordServiceTests : ServiceTestBase
         var handler = new TestLifecycleHandler();
         var svc = new Xrm.Core.Services.RecordService(DbFactory, new[] { handler });
 
-        var record = await svc.CreateAsync(entityId, """{"Name":"V1"}""");
-        await svc.UpdateAsync(entityId, record.Id, """{"Name":"V2"}""");
+        var result = await svc.CreateAsync(entityId, """{"Name":"V1"}""");
+        await svc.UpdateAsync(entityId, result.Record!.Id, """{"Name":"V2"}""");
 
         Assert.Equal("OnUpdated called", handler.LastEvent);
         Assert.Contains("V1", handler.LastOldDataJson);

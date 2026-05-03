@@ -119,7 +119,7 @@ public class RecordService : IRecordService
             .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId);
     }
 
-    public async Task<Record> CreateAsync(Guid entityId, string dataJson)
+    public async Task<SaveResult> CreateAsync(Guid entityId, string dataJson)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         var entity = await db.EntityDefinitions.FindAsync(entityId)
@@ -154,19 +154,23 @@ public class RecordService : IRecordService
 
         await db.SaveChangesAsync();
 
-        // Post-save hook
+        // Post-save hooks — collect warnings instead of failing
+        var warnings = new List<string>();
         foreach (var handler in _lifecycleHandlers)
-            await handler.OnCreatedAsync(record, entity);
+        {
+            try { await handler.OnCreatedAsync(record, entity); }
+            catch (Exception ex) { warnings.Add(ex.Message); }
+        }
 
-        return record;
+        return new SaveResult(true, record, warnings);
     }
 
-    public async Task<bool> UpdateAsync(Guid entityId, Guid id, string dataJson)
+    public async Task<SaveResult> UpdateAsync(Guid entityId, Guid id, string dataJson)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         var record = await db.Records
             .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId);
-        if (record is null) return false;
+        if (record is null) return new SaveResult(false);
 
         var entity = await db.EntityDefinitions.FindAsync(entityId)
             ?? throw new InvalidOperationException($"Entity {entityId} not found");
@@ -193,11 +197,15 @@ public class RecordService : IRecordService
 
         await db.SaveChangesAsync();
 
-        // Post-save hook
+        // Post-save hooks — collect warnings instead of failing
+        var warnings = new List<string>();
         foreach (var handler in _lifecycleHandlers)
-            await handler.OnUpdatedAsync(record, oldDataJson, entity);
+        {
+            try { await handler.OnUpdatedAsync(record, oldDataJson, entity); }
+            catch (Exception ex) { warnings.Add(ex.Message); }
+        }
 
-        return true;
+        return new SaveResult(true, record, warnings);
     }
 
     private static async Task ValidateRecordData(XrmDbContext db, Guid entityId, string dataJson)

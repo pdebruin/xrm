@@ -15,7 +15,7 @@ public class AuditServiceTests : ServiceTestBase
         await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "Title", DataType = FieldDataType.Text });
 
         var recSvc = CreateRecordService();
-        var record = await recSvc.CreateAsync(entity.Id, """{"Title":"Hello"}""");
+        var result = await recSvc.CreateAsync(entity.Id, """{"Title":"Hello"}"""); var record = result.Record!;
 
         var auditSvc = CreateAuditService();
         var history = await auditSvc.GetHistoryAsync(record.Id);
@@ -37,7 +37,7 @@ public class AuditServiceTests : ServiceTestBase
         await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "Status", DataType = FieldDataType.Text });
 
         var recSvc = CreateRecordService();
-        var record = await recSvc.CreateAsync(entity.Id, """{"Status":"Open"}""");
+        var result = await recSvc.CreateAsync(entity.Id, """{"Status":"Open"}"""); var record = result.Record!;
         await recSvc.UpdateAsync(entity.Id, record.Id, """{"Status":"Closed"}""");
 
         var auditSvc = CreateAuditService();
@@ -59,7 +59,7 @@ public class AuditServiceTests : ServiceTestBase
         await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "Name", DataType = FieldDataType.Text });
 
         var recSvc = CreateRecordService();
-        var record = await recSvc.CreateAsync(entity.Id, """{"Name":"ToDelete"}""");
+        var result = await recSvc.CreateAsync(entity.Id, """{"Name":"ToDelete"}"""); var record = result.Record!;
         await recSvc.DeleteAsync(entity.Id, record.Id);
 
         var auditSvc = CreateAuditService();

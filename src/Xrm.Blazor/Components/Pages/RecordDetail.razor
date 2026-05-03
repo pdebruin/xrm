@@ -16,6 +16,10 @@
 {
     <div class="alert alert-danger">@_error</div>
 }
+@if (_warning is not null)
+{
+    <div class="alert alert-warning">Saved — Warning: @_warning</div>
+}
 
 @if (_entityDef is null)
 {
@@ -396,6 +400,7 @@ else
     private bool _editing;
     private bool _showHistory;
     private string? _error;
+    private string? _warning;
     private EntityDefinition? _entityDef;
     private List<FieldDefinition> _fields = new();
     private Dictionary<string, object?> _data = new();
@@ -552,25 +557,30 @@ else
     {
         _saving = true;
         _error = null;
+        _warning = null;
         try
         {
             var json = JsonSerializer.Serialize(_data);
 
             if (_isNew)
             {
-                var created = await RecordService.CreateAsync(EntityId, json);
+                var result = await RecordService.CreateAsync(EntityId, json);
+                if (result.HasWarnings)
+                    _warning = string.Join("; ", result.Warnings!);
                 foreach (var (relId, parentId) in _parentValues)
                 {
                     if (Guid.TryParse(parentId, out var pid))
                     {
-                        await RecordService.CreateLinkAsync(pid, relId, created.Id);
+                        await RecordService.CreateLinkAsync(pid, relId, result.Record!.Id);
                     }
                 }
                 Nav.NavigateTo($"records/{EntityId}");
             }
             else
             {
-                await RecordService.UpdateAsync(EntityId, RecordId!.Value, json);
+                var result = await RecordService.UpdateAsync(EntityId, RecordId!.Value, json);
+                if (result.HasWarnings)
+                    _warning = string.Join("; ", result.Warnings!);
                 await SaveParentLinks();
                 // Reload child sections (lifecycle hooks may have created/modified children)
                 foreach (var rel in _childRelationships)
@@ -726,8 +736,8 @@ else
             if (_editingChildId is null)
             {
                 // Create new child and link to parent
-                var created = await RecordService.CreateAsync(rel.ChildEntityId, json);
-                await RecordService.CreateLinkAsync(RecordId!.Value, relId, created.Id);
+                var createResult = await RecordService.CreateAsync(rel.ChildEntityId, json);
+                await RecordService.CreateLinkAsync(RecordId!.Value, relId, createResult.Record!.Id);
             }
             else
             {
