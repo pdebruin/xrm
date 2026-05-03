@@ -101,6 +101,19 @@ else
                             </select>
                             break;
 
+                        case FieldDataType.MultiChoice:
+                            var mcSelected = GetMultiChoiceValues(field.Name);
+                            @foreach (var opt in GetOptions(field))
+                            {
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input"
+                                           checked="@mcSelected.Contains(opt)"
+                                           @onchange="(e) => ToggleMultiChoice(field.Name, opt, (bool)(e.Value ?? false))" />
+                                    <label class="form-check-label">@opt</label>
+                                </div>
+                            }
+                            break;
+
                         case FieldDataType.RichText:
                             <textarea class="form-control" rows="4" 
                                       value="@GetValue(field.Name)"
@@ -270,6 +283,19 @@ else
                                         </select>
                                         break;
 
+                                    case FieldDataType.MultiChoice:
+                                        var cmcSelected = GetChildMultiChoiceValues(f.Name);
+                                        @foreach (var opt in GetOptions(f))
+                                        {
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@cmcSelected.Contains(opt)"
+                                                       @onchange="(e) => ToggleChildMultiChoice(f.Name, opt, (bool)(e.Value ?? false))" />
+                                                <label class="form-check-label">@opt</label>
+                                            </div>
+                                        }
+                                        break;
+
                                     default:
                                         <input type="text" class="form-control form-control-sm"
                                                value="@GetChildEditValue(f.Name)"
@@ -389,8 +415,38 @@ else
 
     private void SetValue(string fieldName, object? value) => _data[fieldName] = value;
 
+    private HashSet<string> GetMultiChoiceValues(string fieldName)
+    {
+        if (!_data.TryGetValue(fieldName, out var val) || val is null) return new();
+        if (val is JsonElement je)
+        {
+            if (je.ValueKind == JsonValueKind.Array)
+                return je.EnumerateArray().Select(e => e.GetString() ?? "").Where(s => s != "").ToHashSet();
+            if (je.ValueKind == JsonValueKind.String)
+            {
+                var s = je.GetString();
+                return string.IsNullOrEmpty(s) ? new() : new HashSet<string> { s };
+            }
+        }
+        if (val is List<object?> list)
+            return list.Select(o => o?.ToString() ?? "").Where(s => s != "").ToHashSet();
+        return new();
+    }
+
+    private void ToggleMultiChoice(string fieldName, string option, bool selected)
+    {
+        var values = GetMultiChoiceValues(fieldName);
+        if (selected) values.Add(option); else values.Remove(option);
+        _data[fieldName] = values.ToList();
+    }
+
     private string GetDisplayValue(FieldDefinition field)
     {
+        if (field.DataType == FieldDataType.MultiChoice)
+        {
+            var values = GetMultiChoiceValues(field.Name);
+            return values.Count > 0 ? string.Join(", ", values) : "—";
+        }
         var raw = GetValue(field.Name);
         if (string.IsNullOrEmpty(raw)) return "—";
         if (field.DataType == FieldDataType.Boolean)
@@ -557,6 +613,31 @@ else
         GetChildEditValue(fieldName).Equals("true", StringComparison.OrdinalIgnoreCase);
 
     private void SetChildEditValue(string fieldName, object? value) => _childEditData[fieldName] = value;
+
+    private HashSet<string> GetChildMultiChoiceValues(string fieldName)
+    {
+        if (!_childEditData.TryGetValue(fieldName, out var val) || val is null) return new();
+        if (val is JsonElement je)
+        {
+            if (je.ValueKind == JsonValueKind.Array)
+                return je.EnumerateArray().Select(e => e.GetString() ?? "").Where(s => s != "").ToHashSet();
+            if (je.ValueKind == JsonValueKind.String)
+            {
+                var s = je.GetString();
+                return string.IsNullOrEmpty(s) ? new() : new HashSet<string> { s };
+            }
+        }
+        if (val is List<object?> list)
+            return list.Select(o => o?.ToString() ?? "").Where(s => s != "").ToHashSet();
+        return new();
+    }
+
+    private void ToggleChildMultiChoice(string fieldName, string option, bool selected)
+    {
+        var values = GetChildMultiChoiceValues(fieldName);
+        if (selected) values.Add(option); else values.Remove(option);
+        _childEditData[fieldName] = values.ToList();
+    }
 
     private async Task SaveChild(Guid relId)
     {

@@ -84,6 +84,7 @@ public class DemoDataSeeder : IDataSeeder
             new() { Id = Guid.NewGuid(), EntityDefinitionId = product.Id, Name = "Weight", DisplayName = "Weight (kg)", DataType = FieldDataType.Decimal, SortOrder = 6 },
             new() { Id = Guid.NewGuid(), EntityDefinitionId = product.Id, Name = "Description", DisplayName = "Description", DataType = FieldDataType.RichText, SortOrder = 7 },
             new() { Id = Guid.NewGuid(), EntityDefinitionId = product.Id, Name = "Active", DisplayName = "Active", DataType = FieldDataType.Boolean, DefaultValue = "true", SortOrder = 8 },
+            new() { Id = Guid.NewGuid(), EntityDefinitionId = product.Id, Name = "Tags", DisplayName = "Tags", DataType = FieldDataType.MultiChoice, OptionsJson = Json(new[] { "New", "Sale", "Featured", "Clearance", "Bestseller" }), SortOrder = 9 },
 
             // Activity fields
             new() { Id = Guid.NewGuid(), EntityDefinitionId = activity.Id, Name = "Subject", DisplayName = "Subject", DataType = FieldDataType.Text, IsRequired = true, MaxLength = 200, SortOrder = 1 },
@@ -167,11 +168,11 @@ public class DemoDataSeeder : IDataSeeder
         var dominic = Rec(contact.Id, new { FirstName = "Dominic", LastName = "Pinto", Email = "dominic.p@northwind.com", Phone = "+1-503-555-0501", JobTitle = "Owner", Department = "Executive" });
 
         // Products
-        var roadBike = Rec(product.Id, new { Name = "Road-150 Red", ProductNumber = "BK-R93R-62", Category = "Bikes", ListPrice = 3578.27, StandardCost = 1898.09, Weight = 6.7, Description = "Top-of-the-line competition road bike.", Active = true });
-        var mountainBike = Rec(product.Id, new { Name = "Mountain-100 Silver", ProductNumber = "BK-M82S-44", Category = "Bikes", ListPrice = 3399.99, StandardCost = 1912.15, Weight = 9.2, Description = "High-performance mountain bike for trail riding.", Active = true });
-        var touringBike = Rec(product.Id, new { Name = "Touring-1000 Blue", ProductNumber = "BK-T79U-50", Category = "Bikes", ListPrice = 2384.07, StandardCost = 1481.92, Weight = 11.5, Description = "Comfortable touring bike for long distances.", Active = true });
-        var helmet = Rec(product.Id, new { Name = "Sport-100 Helmet Black", ProductNumber = "HL-U509", Category = "Accessories", ListPrice = 34.99, StandardCost = 13.09, Weight = 0.3, Active = true });
-        var jersey = Rec(product.Id, new { Name = "Long-Sleeve Logo Jersey L", ProductNumber = "LJ-0192-L", Category = "Clothing", ListPrice = 49.99, StandardCost = 22.19, Weight = 0.2, Active = true });
+        var roadBike = Rec(product.Id, new { Name = "Road-150 Red", ProductNumber = "BK-R93R-62", Category = "Bikes", ListPrice = 3578.27, StandardCost = 1898.09, Weight = 6.7, Description = "Top-of-the-line competition road bike.", Active = true, Tags = new[] { "Featured", "Bestseller" } });
+        var mountainBike = Rec(product.Id, new { Name = "Mountain-100 Silver", ProductNumber = "BK-M82S-44", Category = "Bikes", ListPrice = 3399.99, StandardCost = 1912.15, Weight = 9.2, Description = "High-performance mountain bike for trail riding.", Active = true, Tags = new[] { "New", "Featured" } });
+        var touringBike = Rec(product.Id, new { Name = "Touring-1000 Blue", ProductNumber = "BK-T79U-50", Category = "Bikes", ListPrice = 2384.07, StandardCost = 1481.92, Weight = 11.5, Description = "Comfortable touring bike for long distances.", Active = true, Tags = new[] { "Sale" } });
+        var helmet = Rec(product.Id, new { Name = "Sport-100 Helmet Black", ProductNumber = "HL-U509", Category = "Accessories", ListPrice = 34.99, StandardCost = 13.09, Weight = 0.3, Active = true, Tags = new[] { "Bestseller" } });
+        var jersey = Rec(product.Id, new { Name = "Long-Sleeve Logo Jersey L", ProductNumber = "LJ-0192-L", Category = "Clothing", ListPrice = 49.99, StandardCost = 22.19, Weight = 0.2, Active = true, Tags = new[] { "New", "Sale" } });
         var tire = Rec(product.Id, new { Name = "ML Road Tire", ProductNumber = "TI-R092", Category = "Components", ListPrice = 21.49, StandardCost = 9.30, Weight = 0.5, Active = true });
 
         // Activities

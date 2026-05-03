@@ -136,7 +136,8 @@ public class RecordService : IRecordService
         {
             var hasValue = data.TryGetValue(field.Name, out var val)
                 && val.ValueKind != System.Text.Json.JsonValueKind.Null
-                && !(val.ValueKind == System.Text.Json.JsonValueKind.String && string.IsNullOrWhiteSpace(val.GetString()));
+                && !(val.ValueKind == System.Text.Json.JsonValueKind.String && string.IsNullOrWhiteSpace(val.GetString()))
+                && !(val.ValueKind == System.Text.Json.JsonValueKind.Array && val.GetArrayLength() == 0);
 
             if (field.IsRequired && !hasValue)
             {
@@ -170,6 +171,19 @@ public class RecordService : IRecordService
                 var options = System.Text.Json.JsonSerializer.Deserialize<List<string>>(field.OptionsJson) ?? new();
                 if (options.Count > 0 && !options.Contains(strVal))
                     errors.Add($"'{field.DisplayName ?? field.Name}' must be one of: {string.Join(", ", options)}");
+            }
+
+            if (field.DataType == FieldDataType.MultiChoice && !string.IsNullOrEmpty(field.OptionsJson))
+            {
+                var options = System.Text.Json.JsonSerializer.Deserialize<List<string>>(field.OptionsJson) ?? new();
+                if (options.Count > 0 && val.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    var selected = val.EnumerateArray()
+                        .Select(e => e.GetString() ?? "").Where(s => s != "").ToList();
+                    var invalid = selected.Where(s => !options.Contains(s)).ToList();
+                    if (invalid.Count > 0)
+                        errors.Add($"'{field.DisplayName ?? field.Name}' contains invalid values: {string.Join(", ", invalid)}");
+                }
             }
         }
 

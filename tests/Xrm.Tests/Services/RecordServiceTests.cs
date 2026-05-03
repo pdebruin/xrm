@@ -280,6 +280,61 @@ public class RecordServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task Create_ValidMultiChoiceValues_Succeeds()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "McOk" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Tags", DataType = FieldDataType.MultiChoice, OptionsJson = """["A","B","C"]"""
+        });
+
+        var recSvc = CreateRecordService();
+        var rec = await recSvc.CreateAsync(entity.Id, """{"Tags":["A","C"]}""");
+        Assert.NotNull(rec);
+        Assert.Contains("A", rec.DataJson);
+        Assert.Contains("C", rec.DataJson);
+    }
+
+    [Fact]
+    public async Task Create_InvalidMultiChoiceValue_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "McBad" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Tags", DataType = FieldDataType.MultiChoice, OptionsJson = """["A","B","C"]"""
+        });
+
+        var recSvc = CreateRecordService();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{"Tags":["A","Invalid"]}"""));
+        Assert.Contains("invalid values", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_RequiredMultiChoiceEmpty_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "McReq" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Tags", DataType = FieldDataType.MultiChoice, IsRequired = true, OptionsJson = """["A","B"]"""
+        });
+
+        var recSvc = CreateRecordService();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{"Tags":[]}"""));
+        Assert.Contains("required", ex.Message);
+    }
+
+    [Fact]
     public async Task Create_NumericMinViolation_Throws()
     {
         var entitySvc = CreateEntityService();
