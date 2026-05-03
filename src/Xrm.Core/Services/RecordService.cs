@@ -186,7 +186,7 @@ public class RecordService : IRecordService
 
         // Remove associated links
         var links = await db.RecordLinks
-            .Where(l => l.SourceRecordId == id || l.TargetRecordId == id)
+            .Where(l => l.ParentRecordId == id || l.ChildRecordId == id)
             .ToListAsync();
         db.RecordLinks.RemoveRange(links);
         db.Records.Remove(record);
@@ -199,19 +199,19 @@ public class RecordService : IRecordService
         await using var db = await _dbFactory.CreateDbContextAsync();
         return await db.RecordLinks
             .Include(l => l.RelationshipDefinition)
-            .Where(l => l.SourceRecordId == recordId || l.TargetRecordId == recordId)
+            .Where(l => l.ParentRecordId == recordId || l.ChildRecordId == recordId)
             .Select(l => new RecordLinkInfo(
                 l.Id,
                 l.RelationshipDefinitionId,
                 l.RelationshipDefinition!.DisplayName ?? l.RelationshipDefinition.Name,
-                l.SourceRecordId,
-                l.TargetRecordId,
-                l.SourceRecordId == recordId ? "outgoing" : "incoming"
+                l.ParentRecordId,
+                l.ChildRecordId,
+                l.ParentRecordId == recordId ? "outgoing" : "incoming"
             ))
             .ToListAsync();
     }
 
-    public async Task<RecordLink> CreateLinkAsync(Guid recordId, Guid relationshipId, Guid targetRecordId)
+    public async Task<RecordLink> CreateLinkAsync(Guid recordId, Guid relationshipId, Guid childRecordId)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
 
@@ -219,24 +219,24 @@ public class RecordService : IRecordService
         var rel = await db.RelationshipDefinitions.FindAsync(relationshipId)
             ?? throw new InvalidOperationException($"Relationship {relationshipId} not found");
 
-        // Validate source record belongs to the relationship's source entity
-        var sourceRecord = await db.Records.FirstOrDefaultAsync(r => r.Id == recordId)
-            ?? throw new InvalidOperationException($"Source record {recordId} not found");
-        if (sourceRecord.EntityDefinitionId != rel.SourceEntityId)
-            throw new InvalidOperationException($"Source record does not belong to entity {rel.SourceEntityId}");
+        // Validate parent record belongs to the relationship's parent entity
+        var parentRecord = await db.Records.FirstOrDefaultAsync(r => r.Id == recordId)
+            ?? throw new InvalidOperationException($"Parent record {recordId} not found");
+        if (parentRecord.EntityDefinitionId != rel.ParentEntityId)
+            throw new InvalidOperationException($"Parent record does not belong to entity {rel.ParentEntityId}");
 
-        // Validate target record belongs to the relationship's target entity
-        var targetRecord = await db.Records.FirstOrDefaultAsync(r => r.Id == targetRecordId)
-            ?? throw new InvalidOperationException($"Target record {targetRecordId} not found");
-        if (targetRecord.EntityDefinitionId != rel.TargetEntityId)
-            throw new InvalidOperationException($"Target record does not belong to entity {rel.TargetEntityId}");
+        // Validate child record belongs to the relationship's child entity
+        var childRecord = await db.Records.FirstOrDefaultAsync(r => r.Id == childRecordId)
+            ?? throw new InvalidOperationException($"Child record {childRecordId} not found");
+        if (childRecord.EntityDefinitionId != rel.ChildEntityId)
+            throw new InvalidOperationException($"Child record does not belong to entity {rel.ChildEntityId}");
 
         var link = new RecordLink
         {
             Id = Guid.NewGuid(),
             RelationshipDefinitionId = relationshipId,
-            SourceRecordId = recordId,
-            TargetRecordId = targetRecordId
+            ParentRecordId = recordId,
+            ChildRecordId = childRecordId
         };
         db.RecordLinks.Add(link);
         await db.SaveChangesAsync();

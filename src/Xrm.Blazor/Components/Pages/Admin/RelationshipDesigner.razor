@@ -37,8 +37,8 @@ else
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Source Entity</th>
-                <th>Target Entity</th>
+                <th>Parent Entity</th>
+                <th>Child Entity</th>
                 <th>Type</th>
                 <th>On Delete</th>
                 <th></th>
@@ -49,8 +49,8 @@ else
             {
                 <tr>
                     <td>@(rel.DisplayName ?? rel.Name)</td>
-                    <td>@(rel.SourceEntity?.DisplayName ?? rel.SourceEntity?.Name ?? "—")</td>
-                    <td>@(rel.TargetEntity?.DisplayName ?? rel.TargetEntity?.Name ?? "—")</td>
+                    <td>@(rel.ParentEntity?.DisplayName ?? rel.ParentEntity?.Name ?? "—")</td>
+                    <td>@(rel.ChildEntity?.DisplayName ?? rel.ChildEntity?.Name ?? "—")</td>
                     <td><span class="badge bg-info">@rel.RelationshipType</span></td>
                     <td><span class="badge bg-warning text-dark">@rel.CascadeBehavior</span></td>
                     <td>
@@ -82,8 +82,8 @@ else
                         <input class="form-control" @bind="_form.DisplayName" placeholder="e.g. Company → Contacts" />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Source Entity (parent / "one" side)</label>
-                        <select class="form-select" @bind="_form.SourceEntityId">
+                        <label class="form-label">Parent Entity ("one" side)</label>
+                        <select class="form-select" @bind="_form.ParentEntityId">
                             <option value="">-- Select --</option>
                             @if (_entities is not null)
                             {
@@ -95,8 +95,8 @@ else
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Target Entity (child / "many" side)</label>
-                        <select class="form-select" @bind="_form.TargetEntityId">
+                        <label class="form-label">Child Entity ("many" side)</label>
+                        <select class="form-select" @bind="_form.ChildEntityId">
                             <option value="">-- Select --</option>
                             @if (_entities is not null)
                             {
@@ -168,8 +168,8 @@ else
         {
             Name = rel.Name,
             DisplayName = rel.DisplayName ?? "",
-            SourceEntityId = rel.SourceEntityId.ToString(),
-            TargetEntityId = rel.TargetEntityId.ToString(),
+            ParentEntityId = rel.ParentEntityId.ToString(),
+            ChildEntityId = rel.ChildEntityId.ToString(),
             RelationshipType = rel.RelationshipType,
             CascadeBehavior = rel.CascadeBehavior
         };
@@ -179,8 +179,8 @@ else
     private async Task SaveRel()
     {
         _error = null;
-        if (!Guid.TryParse(_form.SourceEntityId, out var sourceId) ||
-            !Guid.TryParse(_form.TargetEntityId, out var targetId))
+        if (!Guid.TryParse(_form.ParentEntityId, out var parentId) ||
+            !Guid.TryParse(_form.ChildEntityId, out var childId))
         {
             _error = "Please select both source and target entities.";
             return;
@@ -193,8 +193,8 @@ else
                 Id = _editingId ?? Guid.Empty,
                 Name = _form.Name,
                 DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? null : _form.DisplayName,
-                SourceEntityId = sourceId,
-                TargetEntityId = targetId,
+                ParentEntityId = parentId,
+                ChildEntityId = childId,
                 RelationshipType = _form.RelationshipType,
                 CascadeBehavior = _form.CascadeBehavior
             };
@@ -238,8 +238,8 @@ else
     {
         public string Name { get; set; } = "";
         public string DisplayName { get; set; } = "";
-        public string SourceEntityId { get; set; } = "";
-        public string TargetEntityId { get; set; } = "";
+        public string ParentEntityId { get; set; } = "";
+        public string ChildEntityId { get; set; } = "";
         public RelationshipType RelationshipType { get; set; } = RelationshipType.OneToMany;
         public CascadeBehavior CascadeBehavior { get; set; } = CascadeBehavior.None;
     }

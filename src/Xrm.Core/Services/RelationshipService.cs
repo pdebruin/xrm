@@ -14,8 +14,8 @@ public class RelationshipService : IRelationshipService
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         return await db.RelationshipDefinitions
-            .Include(r => r.SourceEntity)
-            .Include(r => r.TargetEntity)
+            .Include(r => r.ParentEntity)
+            .Include(r => r.ChildEntity)
             .OrderBy(r => r.Name)
             .ToListAsync();
     }
@@ -24,21 +24,21 @@ public class RelationshipService : IRelationshipService
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         return await db.RelationshipDefinitions
-            .Include(r => r.SourceEntity)
-            .Include(r => r.TargetEntity)
+            .Include(r => r.ParentEntity)
+            .Include(r => r.ChildEntity)
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 
-    public async Task<(List<RelationshipDefinition> Source, List<RelationshipDefinition> Target)> GetForEntityAsync(Guid entityId)
+    public async Task<(List<RelationshipDefinition> AsParent, List<RelationshipDefinition> AsChild)> GetForEntityAsync(Guid entityId)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
-        var source = await db.RelationshipDefinitions
-            .Where(r => r.SourceEntityId == entityId)
+        var asParent = await db.RelationshipDefinitions
+            .Where(r => r.ParentEntityId == entityId)
             .ToListAsync();
-        var target = await db.RelationshipDefinitions
-            .Where(r => r.TargetEntityId == entityId)
+        var asChild = await db.RelationshipDefinitions
+            .Where(r => r.ChildEntityId == entityId)
             .ToListAsync();
-        return (source, target);
+        return (asParent, asChild);
     }
 
     public async Task<RelationshipDefinition> CreateAsync(RelationshipDefinition rel)
@@ -46,10 +46,10 @@ public class RelationshipService : IRelationshipService
         await using var db = await _dbFactory.CreateDbContextAsync();
 
         // Validate both entities exist
-        var sourceExists = await db.EntityDefinitions.AnyAsync(e => e.Id == rel.SourceEntityId);
-        var targetExists = await db.EntityDefinitions.AnyAsync(e => e.Id == rel.TargetEntityId);
-        if (!sourceExists || !targetExists)
-            throw new InvalidOperationException("Source or target entity not found");
+        var parentExists = await db.EntityDefinitions.AnyAsync(e => e.Id == rel.ParentEntityId);
+        var childExists = await db.EntityDefinitions.AnyAsync(e => e.Id == rel.ChildEntityId);
+        if (!parentExists || !childExists)
+            throw new InvalidOperationException("Parent or child entity not found");
 
         rel.Id = Guid.NewGuid();
         db.RelationshipDefinitions.Add(rel);
@@ -65,8 +65,8 @@ public class RelationshipService : IRelationshipService
 
         existing.Name = rel.Name;
         existing.DisplayName = rel.DisplayName;
-        existing.SourceEntityId = rel.SourceEntityId;
-        existing.TargetEntityId = rel.TargetEntityId;
+        existing.ParentEntityId = rel.ParentEntityId;
+        existing.ChildEntityId = rel.ChildEntityId;
         existing.RelationshipType = rel.RelationshipType;
         existing.CascadeBehavior = rel.CascadeBehavior;
 

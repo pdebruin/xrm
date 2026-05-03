@@ -32,8 +32,8 @@ public class EntitiesController : ControllerBase
     [HttpGet("{id:guid}/relationships")]
     public async Task<ActionResult<EntityRelationshipsDto>> GetRelationships(Guid id)
     {
-        var (source, target) = await _relationships.GetForEntityAsync(id);
-        return new EntityRelationshipsDto { SourceRelationships = source, TargetRelationships = target };
+        var (asParent, asChild) = await _relationships.GetForEntityAsync(id);
+        return new EntityRelationshipsDto { ParentRelationships = asParent, ChildRelationships = asChild };
     }
 
     [HttpPost]
@@ -69,7 +69,7 @@ public class EntitiesController : ControllerBase
 
 public class EntityRelationshipsDto
 {
-    public List<RelationshipDefinition> SourceRelationships { get; set; } = new();
-    public List<RelationshipDefinition> TargetRelationships { get; set; } = new();
+    public List<RelationshipDefinition> ParentRelationships { get; set; } = new();
+    public List<RelationshipDefinition> ChildRelationships { get; set; } = new();
 }
 

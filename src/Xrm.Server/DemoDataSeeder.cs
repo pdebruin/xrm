@@ -118,25 +118,25 @@ public class DemoDataSeeder : IDataSeeder
         var companyContacts = new RelationshipDefinition
         {
             Id = Guid.NewGuid(), Name = "CompanyContacts", DisplayName = "Company → Contacts",
-            SourceEntityId = company.Id, TargetEntityId = contact.Id,
+            ParentEntityId = company.Id, ChildEntityId = contact.Id,
             RelationshipType = RelationshipType.OneToMany, CascadeBehavior = CascadeBehavior.RemoveLink
         };
         var contactActivities = new RelationshipDefinition
         {
             Id = Guid.NewGuid(), Name = "ContactActivities", DisplayName = "Contact → Activities",
-            SourceEntityId = contact.Id, TargetEntityId = activity.Id,
+            ParentEntityId = contact.Id, ChildEntityId = activity.Id,
             RelationshipType = RelationshipType.OneToMany, CascadeBehavior = CascadeBehavior.Cascade
         };
         var companyOrders = new RelationshipDefinition
         {
             Id = Guid.NewGuid(), Name = "CompanyOrders", DisplayName = "Company → Orders",
-            SourceEntityId = company.Id, TargetEntityId = order.Id,
+            ParentEntityId = company.Id, ChildEntityId = order.Id,
             RelationshipType = RelationshipType.OneToMany, CascadeBehavior = CascadeBehavior.RemoveLink
         };
         var orderLines = new RelationshipDefinition
         {
             Id = Guid.NewGuid(), Name = "OrderLines", DisplayName = "Order → Lines",
-            SourceEntityId = order.Id, TargetEntityId = orderLine.Id,
+            ParentEntityId = order.Id, ChildEntityId = orderLine.Id,
             RelationshipType = RelationshipType.OneToMany, CascadeBehavior = CascadeBehavior.Cascade
         };
 
@@ -235,11 +235,11 @@ public class DemoDataSeeder : IDataSeeder
         DataJson = JsonSerializer.Serialize(data)
     };
 
-    private static RecordLink Link(Guid relId, Guid sourceId, Guid targetId) => new()
+    private static RecordLink Link(Guid relId, Guid parentId, Guid childId) => new()
     {
         Id = Guid.NewGuid(),
         RelationshipDefinitionId = relId,
-        SourceRecordId = sourceId,
-        TargetRecordId = targetId
+        ParentRecordId = parentId,
+        ChildRecordId = childId
     };
 }

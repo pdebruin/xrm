@@ -139,8 +139,8 @@ public class RecordServiceTests : ServiceTestBase
         var rel = await relSvc.CreateAsync(new RelationshipDefinition
         {
             Name = "CompanyContacts",
-            SourceEntityId = company.Id,
-            TargetEntityId = contact.Id,
+            ParentEntityId = company.Id,
+            ChildEntityId = contact.Id,
             RelationshipType = RelationshipType.OneToMany
         });
 
@@ -173,8 +173,8 @@ public class RecordServiceTests : ServiceTestBase
         var rel = await relSvc.CreateAsync(new RelationshipDefinition
         {
             Name = "AtoB",
-            SourceEntityId = a.Id,
-            TargetEntityId = b.Id,
+            ParentEntityId = a.Id,
+            ChildEntityId = b.Id,
             RelationshipType = RelationshipType.OneToMany
         });
 
@@ -213,7 +213,7 @@ public class RecordServiceTests : ServiceTestBase
         var relSvc = CreateRelationshipService();
         var rel = await relSvc.CreateAsync(new RelationshipDefinition
         {
-            Name = "AtoB", SourceEntityId = a.Id, TargetEntityId = b.Id, RelationshipType = RelationshipType.OneToMany
+            Name = "AtoB", ParentEntityId = a.Id, ChildEntityId = b.Id, RelationshipType = RelationshipType.OneToMany
         });
 
         var recSvc = CreateRecordService();

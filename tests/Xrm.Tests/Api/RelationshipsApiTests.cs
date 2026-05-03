@@ -37,14 +37,14 @@ public class RelationshipsApiTests : IClassFixture<XrmWebApplicationFactory>
     [Fact]
     public async Task CreateRelationship_Returns201()
     {
-        var sourceId = await CreateEntityAsync("RelSource1");
-        var targetId = await CreateEntityAsync("RelTarget1");
+        var parentId = await CreateEntityAsync("RelSource1");
+        var childId = await CreateEntityAsync("RelTarget1");
 
         var response = await _client.PostAsJsonAsync("/api/relationships", new
         {
             Name = "TestRel",
-            SourceEntityId = sourceId,
-            TargetEntityId = targetId,
+            ParentEntityId = parentId,
+            ChildEntityId = childId,
             RelationshipType = "OneToMany",
             CascadeBehavior = "None"
         });
@@ -66,14 +66,14 @@ public class RelationshipsApiTests : IClassFixture<XrmWebApplicationFactory>
     [Fact]
     public async Task UpdateRelationship_ReturnsNoContent()
     {
-        var sourceId = await CreateEntityAsync("RelUpdateSource");
-        var targetId = await CreateEntityAsync("RelUpdateTarget");
+        var parentId = await CreateEntityAsync("RelUpdateSource");
+        var childId = await CreateEntityAsync("RelUpdateTarget");
 
         var createRes = await _client.PostAsJsonAsync("/api/relationships", new
         {
             Name = "OriginalRel",
-            SourceEntityId = sourceId,
-            TargetEntityId = targetId,
+            ParentEntityId = parentId,
+            ChildEntityId = childId,
             RelationshipType = "OneToMany",
             CascadeBehavior = "None"
         });
@@ -82,8 +82,8 @@ public class RelationshipsApiTests : IClassFixture<XrmWebApplicationFactory>
         var updateRes = await _client.PutAsJsonAsync($"/api/relationships/{rel!.Id}", new
         {
             Name = "RenamedRel",
-            SourceEntityId = sourceId,
-            TargetEntityId = targetId,
+            ParentEntityId = parentId,
+            ChildEntityId = childId,
             RelationshipType = "ManyToMany",
             CascadeBehavior = "Cascade"
         });
@@ -93,14 +93,14 @@ public class RelationshipsApiTests : IClassFixture<XrmWebApplicationFactory>
     [Fact]
     public async Task UpdateRelationship_NotFound_Returns404()
     {
-        var sourceId = await CreateEntityAsync("RelUpdateNFSource");
-        var targetId = await CreateEntityAsync("RelUpdateNFTarget");
+        var parentId = await CreateEntityAsync("RelUpdateNFSource");
+        var childId = await CreateEntityAsync("RelUpdateNFTarget");
 
         var response = await _client.PutAsJsonAsync($"/api/relationships/{Guid.NewGuid()}", new
         {
             Name = "Ghost",
-            SourceEntityId = sourceId,
-            TargetEntityId = targetId,
+            ParentEntityId = parentId,
+            ChildEntityId = childId,
             RelationshipType = "OneToMany",
             CascadeBehavior = "None"
         });
@@ -110,14 +110,14 @@ public class RelationshipsApiTests : IClassFixture<XrmWebApplicationFactory>
     [Fact]
     public async Task DeleteRelationship_ReturnsNoContent()
     {
-        var sourceId = await CreateEntityAsync("RelDeleteSource");
-        var targetId = await CreateEntityAsync("RelDeleteTarget");
+        var parentId = await CreateEntityAsync("RelDeleteSource");
+        var childId = await CreateEntityAsync("RelDeleteTarget");
 
         var createRes = await _client.PostAsJsonAsync("/api/relationships", new
         {
             Name = "ToDeleteRel",
-            SourceEntityId = sourceId,
-            TargetEntityId = targetId,
+            ParentEntityId = parentId,
+            ChildEntityId = childId,
             RelationshipType = "OneToMany",
             CascadeBehavior = "None"
         });
@@ -137,15 +137,15 @@ public class RelationshipsApiTests : IClassFixture<XrmWebApplicationFactory>
     [Fact]
     public async Task Crud_FullLifecycle()
     {
-        var sourceId = await CreateEntityAsync("RelLifecycleSource");
-        var targetId = await CreateEntityAsync("RelLifecycleTarget");
+        var parentId = await CreateEntityAsync("RelLifecycleSource");
+        var childId = await CreateEntityAsync("RelLifecycleTarget");
 
         // Create
         var createRes = await _client.PostAsJsonAsync("/api/relationships", new
         {
             Name = "LifecycleRel",
-            SourceEntityId = sourceId,
-            TargetEntityId = targetId,
+            ParentEntityId = parentId,
+            ChildEntityId = childId,
             RelationshipType = "OneToMany",
             CascadeBehavior = "RemoveLink"
         });
@@ -160,8 +160,8 @@ public class RelationshipsApiTests : IClassFixture<XrmWebApplicationFactory>
         var putRes = await _client.PutAsJsonAsync($"/api/relationships/{rel.Id}", new
         {
             Name = "UpdatedRel",
-            SourceEntityId = sourceId,
-            TargetEntityId = targetId,
+            ParentEntityId = parentId,
+            ChildEntityId = childId,
             RelationshipType = "ManyToMany",
             CascadeBehavior = "Cascade"
         });

@@ -72,8 +72,8 @@ public class RecordsController : ControllerBase
             Id = l.Id,
             RelationshipId = l.RelationshipId,
             RelationshipName = l.RelationshipName,
-            SourceRecordId = l.SourceRecordId,
-            TargetRecordId = l.TargetRecordId,
+            ParentRecordId = l.ParentRecordId,
+            ChildRecordId = l.ChildRecordId,
             Direction = l.Direction
         }).ToList();
     }
@@ -81,7 +81,7 @@ public class RecordsController : ControllerBase
     [HttpPost("{id:guid}/links")]
     public async Task<IActionResult> CreateLink(Guid entityId, Guid id, [FromBody] CreateLinkRequest request)
     {
-        var link = await _records.CreateLinkAsync(id, request.RelationshipDefinitionId, request.TargetRecordId);
+        var link = await _records.CreateLinkAsync(id, request.RelationshipDefinitionId, request.ChildRecordId);
         return Ok(link);
     }
 
@@ -107,13 +107,13 @@ public class RecordLinkDto
     public Guid Id { get; set; }
     public Guid RelationshipId { get; set; }
     public string RelationshipName { get; set; } = string.Empty;
-    public Guid SourceRecordId { get; set; }
-    public Guid TargetRecordId { get; set; }
+    public Guid ParentRecordId { get; set; }
+    public Guid ChildRecordId { get; set; }
     public string Direction { get; set; } = string.Empty;
 }
 
 public class CreateLinkRequest
 {
     public Guid RelationshipDefinitionId { get; set; }
-    public Guid TargetRecordId { get; set; }
+    public Guid ChildRecordId { get; set; }
 }

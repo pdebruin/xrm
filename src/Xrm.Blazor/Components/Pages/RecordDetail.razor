@@ -56,7 +56,7 @@ else
                                     var label = _parentOptions.TryGetValue(rel.Id, out var opts)
                                         ? opts.FirstOrDefault(o => o.Id == pid)?.Label ?? pid.ToString()
                                         : pid.ToString();
-                                    <a href="@($"records/{rel.SourceEntityId}/{pid}")" class="text-decoration-none">@label ↗</a>
+                                    <a href="@($"records/{rel.ParentEntityId}/{pid}")" class="text-decoration-none">@label ↗</a>
                                 }
                                 else
                                 {
@@ -326,16 +326,16 @@ else
         _fields = _entityDef?.Fields?.OrderBy(f => f.SortOrder).ToList() ?? new();
 
         // Get relationships for this entity
-        var (sourceRels, targetRels) = await RelationshipService.GetForEntityAsync(EntityId);
-        _parentRelationships = targetRels.Where(r => r.RelationshipType == RelationshipType.OneToMany).ToList();
-        _childRelationships = sourceRels.Where(r => r.RelationshipType == RelationshipType.OneToMany).ToList();
+        var (asParent, asChild) = await RelationshipService.GetForEntityAsync(EntityId);
+        _parentRelationships = asChild.Where(r => r.RelationshipType == RelationshipType.OneToMany).ToList();
+        _childRelationships = asParent.Where(r => r.RelationshipType == RelationshipType.OneToMany).ToList();
 
         // Load parent options
         foreach (var rel in _parentRelationships)
         {
-            var parentEntity = await EntityService.GetByIdAsync(rel.SourceEntityId);
+            var parentEntity = await EntityService.GetByIdAsync(rel.ParentEntityId);
             var displayField = GetPrimaryFieldName(parentEntity);
-            var parentRecords = await RecordService.GetAllAsync(rel.SourceEntityId, 1, 100);
+            var parentRecords = await RecordService.GetAllAsync(rel.ParentEntityId, 1, 100);
 
             _parentOptions[rel.Id] = parentRecords.Records.Select(r =>
             {
@@ -359,8 +359,8 @@ else
             foreach (var rel in _parentRelationships)
             {
                 var link = links.FirstOrDefault(l => l.RelationshipId == rel.Id && l.Direction == "incoming");
-                _parentValues[rel.Id] = link?.SourceRecordId.ToString();
-                _originalParentValues[rel.Id] = link?.SourceRecordId.ToString();
+                _parentValues[rel.Id] = link?.ParentRecordId.ToString();
+                _originalParentValues[rel.Id] = link?.ParentRecordId.ToString();
                 _parentLinkIds[rel.Id] = link?.Id;
             }
 
@@ -483,7 +483,7 @@ else
     {
         if (_parentValues.TryGetValue(rel.Id, out var parentId) && Guid.TryParse(parentId, out var pid))
         {
-            Nav.NavigateTo($"records/{rel.SourceEntityId}/{pid}");
+            Nav.NavigateTo($"records/{rel.ParentEntityId}/{pid}");
         }
     }
 
@@ -501,14 +501,14 @@ else
 
     private async Task LoadChildSection(RelationshipDefinition rel)
     {
-        var entity = await EntityService.GetByIdAsync(rel.TargetEntityId);
+        var entity = await EntityService.GetByIdAsync(rel.ChildEntityId);
         var fields = entity?.Fields?.OrderBy(f => f.SortOrder).ToList() ?? new();
         var links = await RecordService.GetLinksAsync(EntityId, RecordId!.Value);
         var childLinks = links.Where(l => l.RelationshipId == rel.Id && l.Direction == "outgoing").ToList();
         var records = new List<Record>();
         foreach (var cl in childLinks)
         {
-            var rec = await RecordService.GetByIdAsync(rel.TargetEntityId, cl.TargetRecordId);
+            var rec = await RecordService.GetByIdAsync(rel.ChildEntityId, cl.ChildRecordId);
             if (rec is not null) records.Add(rec);
         }
         _childSections[rel.Id] = new ChildSection
@@ -569,12 +569,12 @@ else
             if (_editingChildId is null)
             {
                 // Create new child and link to parent
-                var created = await RecordService.CreateAsync(rel.TargetEntityId, json);
+                var created = await RecordService.CreateAsync(rel.ChildEntityId, json);
                 await RecordService.CreateLinkAsync(RecordId!.Value, relId, created.Id);
             }
             else
             {
-                await RecordService.UpdateAsync(rel.TargetEntityId, _editingChildId.Value, json);
+                await RecordService.UpdateAsync(rel.ChildEntityId, _editingChildId.Value, json);
             }
 
             CancelChildEdit();
@@ -590,9 +590,9 @@ else
             var rel = _childRelationships.First(r => r.Id == relId);
             // Delete the link first, then the record
             var links = await RecordService.GetLinksAsync(EntityId, RecordId!.Value);
-            var link = links.FirstOrDefault(l => l.RelationshipId == relId && l.TargetRecordId == childRecordId);
+            var link = links.FirstOrDefault(l => l.RelationshipId == relId && l.ChildRecordId == childRecordId);
             if (link is not null) await RecordService.DeleteLinkAsync(link.Id);
-            await RecordService.DeleteAsync(rel.TargetEntityId, childRecordId);
+            await RecordService.DeleteAsync(rel.ChildEntityId, childRecordId);
             await LoadChildSection(rel);
         }
         catch (Exception ex) { _error = ex.Message; }

@@ -18,7 +18,7 @@ public class Record
     [JsonIgnore]
     public EntityDefinition? EntityDefinition { get; set; }
     [JsonIgnore]
-    public ICollection<RecordLink> SourceLinks { get; set; } = new List<RecordLink>();
+    public ICollection<RecordLink> ParentLinks { get; set; } = new List<RecordLink>();
     [JsonIgnore]
-    public ICollection<RecordLink> TargetLinks { get; set; } = new List<RecordLink>();
+    public ICollection<RecordLink> ChildLinks { get; set; } = new List<RecordLink>();
 }

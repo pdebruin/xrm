@@ -5,7 +5,7 @@ namespace Xrm.Tests.Services;
 
 public class RelationshipServiceTests : ServiceTestBase
 {
-    private async Task<(Guid Source, Guid Target)> CreateTwoEntitiesAsync()
+    private async Task<(Guid Parent, Guid Child)> CreateTwoEntitiesAsync()
     {
         var svc = CreateEntityService();
         var source = await svc.CreateAsync(new EntityDefinition { Name = "Company" });
@@ -22,8 +22,8 @@ public class RelationshipServiceTests : ServiceTestBase
         var rel = await svc.CreateAsync(new RelationshipDefinition
         {
             Name = "CompanyContacts",
-            SourceEntityId = src,
-            TargetEntityId = tgt,
+            ParentEntityId = src,
+            ChildEntityId = tgt,
             RelationshipType = RelationshipType.OneToMany
         });
 
@@ -39,8 +39,8 @@ public class RelationshipServiceTests : ServiceTestBase
         await svc.CreateAsync(new RelationshipDefinition
         {
             Name = "CompanyContacts",
-            SourceEntityId = src,
-            TargetEntityId = tgt,
+            ParentEntityId = src,
+            ChildEntityId = tgt,
             RelationshipType = RelationshipType.OneToMany
         });
 
@@ -59,8 +59,8 @@ public class RelationshipServiceTests : ServiceTestBase
         var rel = await svc.CreateAsync(new RelationshipDefinition
         {
             Name = "Temp",
-            SourceEntityId = src,
-            TargetEntityId = tgt,
+            ParentEntityId = src,
+            ChildEntityId = tgt,
             RelationshipType = RelationshipType.OneToMany
         });
 

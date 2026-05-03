@@ -5,7 +5,7 @@ namespace Xrm.Core.Services;
 
 public record RecordPage(List<Record> Records, int Total, int Page, int PageSize);
 
-public record RecordLinkInfo(Guid Id, Guid RelationshipId, string RelationshipName, Guid SourceRecordId, Guid TargetRecordId, string Direction);
+public record RecordLinkInfo(Guid Id, Guid RelationshipId, string RelationshipName, Guid ParentRecordId, Guid ChildRecordId, string Direction);
 
 public interface IRecordService
 {
@@ -15,6 +15,6 @@ public interface IRecordService
     Task<bool> UpdateAsync(Guid entityId, Guid id, string dataJson);
     Task<bool> DeleteAsync(Guid entityId, Guid id);
     Task<List<RecordLinkInfo>> GetLinksAsync(Guid entityId, Guid recordId);
-    Task<RecordLink> CreateLinkAsync(Guid recordId, Guid relationshipId, Guid targetRecordId);
+    Task<RecordLink> CreateLinkAsync(Guid recordId, Guid relationshipId, Guid childRecordId);
     Task<bool> DeleteLinkAsync(Guid linkId);
 }

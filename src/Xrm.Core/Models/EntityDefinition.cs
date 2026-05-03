@@ -27,9 +27,9 @@ public class EntityDefinition
     public ICollection<FieldDefinition> Fields { get; set; } = new List<FieldDefinition>();
 
     [JsonIgnore]
-    public ICollection<RelationshipDefinition> SourceRelationships { get; set; } = new List<RelationshipDefinition>();
+    public ICollection<RelationshipDefinition> ParentRelationships { get; set; } = new List<RelationshipDefinition>();
     [JsonIgnore]
-    public ICollection<RelationshipDefinition> TargetRelationships { get; set; } = new List<RelationshipDefinition>();
+    public ICollection<RelationshipDefinition> ChildRelationships { get; set; } = new List<RelationshipDefinition>();
     [JsonIgnore]
     public ICollection<Record> Records { get; set; } = new List<Record>();
 }

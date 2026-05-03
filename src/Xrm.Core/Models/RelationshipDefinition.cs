@@ -8,9 +8,9 @@ public class RelationshipDefinition
     public string Name { get; set; } = string.Empty;
     public string? DisplayName { get; set; }
     /// <summary>The "one" (parent) side of a OneToMany relationship.</summary>
-    public Guid SourceEntityId { get; set; }
+    public Guid ParentEntityId { get; set; }
     /// <summary>The "many" (child) side of a OneToMany relationship.</summary>
-    public Guid TargetEntityId { get; set; }
+    public Guid ChildEntityId { get; set; }
     public RelationshipType RelationshipType { get; set; }
     public CascadeBehavior CascadeBehavior { get; set; }
 
@@ -20,9 +20,9 @@ public class RelationshipDefinition
     public string ModifiedBy { get; set; } = "system";
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public EntityDefinition? SourceEntity { get; set; }
+    public EntityDefinition? ParentEntity { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public EntityDefinition? TargetEntity { get; set; }
+    public EntityDefinition? ChildEntity { get; set; }
     [JsonIgnore]
     public ICollection<RecordLink> RecordLinks { get; set; } = new List<RecordLink>();
 }

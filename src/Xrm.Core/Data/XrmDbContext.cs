@@ -46,14 +46,14 @@ public class XrmDbContext : DbContext
             entity.Property(e => e.RelationshipType).HasConversion<string>().HasMaxLength(50);
             entity.Property(e => e.CascadeBehavior).HasConversion<string>().HasMaxLength(50);
 
-            entity.HasOne(e => e.SourceEntity)
-                .WithMany(ed => ed.SourceRelationships)
-                .HasForeignKey(e => e.SourceEntityId)
+            entity.HasOne(e => e.ParentEntity)
+                .WithMany(ed => ed.ParentRelationships)
+                .HasForeignKey(e => e.ParentEntityId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasOne(e => e.TargetEntity)
-                .WithMany(ed => ed.TargetRelationships)
-                .HasForeignKey(e => e.TargetEntityId)
+            entity.HasOne(e => e.ChildEntity)
+                .WithMany(ed => ed.ChildRelationships)
+                .HasForeignKey(e => e.ChildEntityId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -72,21 +72,21 @@ public class XrmDbContext : DbContext
         modelBuilder.Entity<RecordLink>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.RelationshipDefinitionId, e.SourceRecordId, e.TargetRecordId }).IsUnique();
+            entity.HasIndex(e => new { e.RelationshipDefinitionId, e.ParentRecordId, e.ChildRecordId }).IsUnique();
 
             entity.HasOne(e => e.RelationshipDefinition)
                 .WithMany(rd => rd.RecordLinks)
                 .HasForeignKey(e => e.RelationshipDefinitionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(e => e.SourceRecord)
-                .WithMany(r => r.SourceLinks)
-                .HasForeignKey(e => e.SourceRecordId)
+            entity.HasOne(e => e.ParentRecord)
+                .WithMany(r => r.ParentLinks)
+                .HasForeignKey(e => e.ParentRecordId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(e => e.TargetRecord)
-                .WithMany(r => r.TargetLinks)
-                .HasForeignKey(e => e.TargetRecordId)
+            entity.HasOne(e => e.ChildRecord)
+                .WithMany(r => r.ChildLinks)
+                .HasForeignKey(e => e.ChildRecordId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

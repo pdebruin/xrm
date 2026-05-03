@@ -1,14 +1,14 @@
 namespace Xrm.Core.Models;
 
 /// <summary>
-/// Relationship cardinality. Convention: Source = "one" (parent), Target = "many" (child).
+/// Relationship cardinality. Convention: ParentEntity = "one" side, ChildEntity = "many" side.
 /// Use OneToMany for all parent-child relationships.
 /// </summary>
 public enum RelationshipType
 {
-    /// <summary>Source entity is the parent ("one"), Target entity is the child ("many").</summary>
+    /// <summary>ParentEntity has many ChildEntity records.</summary>
     OneToMany,
-    [Obsolete("Use OneToMany with swapped Source/Target instead. Kept for backward compatibility.")]
+    [Obsolete("Use OneToMany with swapped Parent/Child instead. Kept for backward compatibility.")]
     ManyToOne,
     ManyToMany
 }

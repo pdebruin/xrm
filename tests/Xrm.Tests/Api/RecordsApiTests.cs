@@ -167,15 +167,15 @@ public class RecordsApiTests : IClassFixture<XrmWebApplicationFactory>
     [Fact]
     public async Task RecordLinks_FullLifecycle()
     {
-        var sourceEntityId = await CreateEntityAsync("LinkSourceEntity");
-        var targetEntityId = await CreateEntityAsync("LinkTargetEntity");
+        var parentEntityId = await CreateEntityAsync("LinkParentEntity");
+        var childEntityId = await CreateEntityAsync("LinkChildEntity");
 
         // Create a relationship
         var relRes = await _client.PostAsJsonAsync("/api/relationships", new
         {
             Name = "LinkTestRel",
-            SourceEntityId = sourceEntityId,
-            TargetEntityId = targetEntityId,
+            ParentEntityId = parentEntityId,
+            ChildEntityId = childEntityId,
             RelationshipType = "OneToMany",
             CascadeBehavior = "None"
         });
@@ -183,29 +183,29 @@ public class RecordsApiTests : IClassFixture<XrmWebApplicationFactory>
         var relId = rel.GetProperty("id").GetString();
 
         // Create records
-        var srcRecRes = await _client.PostAsJsonAsync($"/api/entities/{sourceEntityId}/records", new { DataJson = """{"Name":"Source"}""" });
+        var srcRecRes = await _client.PostAsJsonAsync($"/api/entities/{parentEntityId}/records", new { DataJson = """{"Name":"Source"}""" });
         var srcRec = await srcRecRes.Content.ReadFromJsonAsync<JsonElement>();
         var srcRecId = srcRec.GetProperty("id").GetString();
 
-        var tgtRecRes = await _client.PostAsJsonAsync($"/api/entities/{targetEntityId}/records", new { DataJson = """{"Name":"Target"}""" });
+        var tgtRecRes = await _client.PostAsJsonAsync($"/api/entities/{childEntityId}/records", new { DataJson = """{"Name":"Target"}""" });
         var tgtRec = await tgtRecRes.Content.ReadFromJsonAsync<JsonElement>();
         var tgtRecId = tgtRec.GetProperty("id").GetString();
 
         // Create link
         var linkRes = await _client.PostAsJsonAsync(
-            $"/api/entities/{sourceEntityId}/records/{srcRecId}/links",
-            new { RelationshipDefinitionId = relId, TargetRecordId = tgtRecId });
+            $"/api/entities/{parentEntityId}/records/{srcRecId}/links",
+            new { RelationshipDefinitionId = relId, ChildRecordId = tgtRecId });
         Assert.Equal(HttpStatusCode.OK, linkRes.StatusCode);
 
         // Get links
-        var getLinksRes = await _client.GetAsync($"/api/entities/{sourceEntityId}/records/{srcRecId}/links");
+        var getLinksRes = await _client.GetAsync($"/api/entities/{parentEntityId}/records/{srcRecId}/links");
         Assert.Equal(HttpStatusCode.OK, getLinksRes.StatusCode);
         var links = await getLinksRes.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(links.GetArrayLength() >= 1);
         var linkId = links[0].GetProperty("id").GetString();
 
         // Delete link
-        var deleteLinkRes = await _client.DeleteAsync($"/api/entities/{sourceEntityId}/records/{srcRecId}/links/{linkId}");
+        var deleteLinkRes = await _client.DeleteAsync($"/api/entities/{parentEntityId}/records/{srcRecId}/links/{linkId}");
         Assert.Equal(HttpStatusCode.NoContent, deleteLinkRes.StatusCode);
     }
 
