@@ -175,7 +175,7 @@ public class RecordService : IRecordService
         var entity = await db.EntityDefinitions.FindAsync(entityId)
             ?? throw new InvalidOperationException($"Entity {entityId} not found");
 
-        await ValidateRecordData(db, entityId, dataJson);
+        await ValidateRecordData(db, entityId, dataJson, record.DataJson);
         var oldDataJson = record.DataJson;
 
         // Pre-save hook
@@ -208,7 +208,10 @@ public class RecordService : IRecordService
         return new SaveResult(true, record, warnings);
     }
 
-    private static async Task ValidateRecordData(XrmDbContext db, Guid entityId, string dataJson)
+    private static Task ValidateRecordData(XrmDbContext db, Guid entityId, string dataJson)
+        => ValidateRecordData(db, entityId, dataJson, oldDataJson: null);
+
+    private static async Task ValidateRecordData(XrmDbContext db, Guid entityId, string dataJson, string? oldDataJson)
     {
         var fields = await db.FieldDefinitions
             .Where(f => f.EntityDefinitionId == entityId)
@@ -272,6 +275,26 @@ public class RecordService : IRecordService
                     errors.Add($"'{field.DisplayName ?? field.Name}' must be one of: {string.Join(", ", options)}");
             }
 
+            // State machine: validate transition is allowed
+            if (field.DataType == FieldDataType.Choice && !string.IsNullOrEmpty(field.TransitionsJson) && oldDataJson is not null)
+            {
+                var oldValue = GetFieldValueFromJson(oldDataJson, field.Name);
+                if (!string.IsNullOrEmpty(oldValue) && oldValue != strVal)
+                {
+                    var transitions = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(field.TransitionsJson) ?? new();
+                    if (transitions.TryGetValue(oldValue, out var allowedNext))
+                    {
+                        if (!allowedNext.Contains(strVal))
+                            errors.Add($"'{field.DisplayName ?? field.Name}' cannot transition from '{oldValue}' to '{strVal}'. Allowed: {string.Join(", ", allowedNext)}");
+                    }
+                    else
+                    {
+                        // State has no outgoing transitions defined — it's a terminal state
+                        errors.Add($"'{field.DisplayName ?? field.Name}' cannot transition from '{oldValue}' (terminal state)");
+                    }
+                }
+            }
+
             if (field.DataType == FieldDataType.MultiChoice && !string.IsNullOrEmpty(field.OptionsJson))
             {
                 var options = System.Text.Json.JsonSerializer.Deserialize<List<string>>(field.OptionsJson) ?? new();
@@ -288,6 +311,19 @@ public class RecordService : IRecordService
 
         if (errors.Count > 0)
             throw new InvalidOperationException(string.Join("; ", errors));
+    }
+
+    private static string? GetFieldValueFromJson(string json, string fieldName)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty(fieldName, out var prop) &&
+                prop.ValueKind == System.Text.Json.JsonValueKind.String)
+                return prop.GetString();
+        }
+        catch { }
+        return null;
     }
 
     public async Task<bool> DeleteAsync(Guid entityId, Guid id)

@@ -465,6 +465,106 @@ public class RecordServiceTests : ServiceTestBase
         Assert.Contains("V1", handler.LastOldDataJson);
     }
 
+    [Fact]
+    public async Task Update_ValidTransition_Succeeds()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "Ticket" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Status",
+            DataType = FieldDataType.Choice,
+            OptionsJson = """["New","Open","Resolved","Closed"]""",
+            TransitionsJson = """{"New":["Open"],"Open":["Resolved","Closed"],"Resolved":["Closed","Open"]}"""
+        });
+
+        var recSvc = CreateRecordService();
+        var result = await recSvc.CreateAsync(entity.Id, """{"Status":"New"}""");
+        Assert.True(result.Success);
+
+        // Valid: New → Open
+        var updated = await recSvc.UpdateAsync(entity.Id, result.Record!.Id, """{"Status":"Open"}""");
+        Assert.True(updated.Success);
+
+        // Valid: Open → Resolved
+        var resolved = await recSvc.UpdateAsync(entity.Id, updated.Record!.Id, """{"Status":"Resolved"}""");
+        Assert.True(resolved.Success);
+    }
+
+    [Fact]
+    public async Task Update_InvalidTransition_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "Ticket2" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Status",
+            DataType = FieldDataType.Choice,
+            OptionsJson = """["New","Open","Resolved","Closed"]""",
+            TransitionsJson = """{"New":["Open"],"Open":["Resolved","Closed"],"Resolved":["Closed","Open"]}"""
+        });
+
+        var recSvc = CreateRecordService();
+        var result = await recSvc.CreateAsync(entity.Id, """{"Status":"New"}""");
+
+        // Invalid: New → Closed (not allowed)
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.UpdateAsync(entity.Id, result.Record!.Id, """{"Status":"Closed"}"""));
+        Assert.Contains("cannot transition from 'New' to 'Closed'", ex.Message);
+    }
+
+    [Fact]
+    public async Task Update_TerminalState_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "Ticket3" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Status",
+            DataType = FieldDataType.Choice,
+            OptionsJson = """["New","Open","Closed"]""",
+            TransitionsJson = """{"New":["Open"],"Open":["Closed"]}"""
+        });
+
+        var recSvc = CreateRecordService();
+        var result = await recSvc.CreateAsync(entity.Id, """{"Status":"New"}""");
+        var opened = await recSvc.UpdateAsync(entity.Id, result.Record!.Id, """{"Status":"Open"}""");
+        var closed = await recSvc.UpdateAsync(entity.Id, opened.Record!.Id, """{"Status":"Closed"}""");
+
+        // Closed is terminal (no key in transitions) — cannot change
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.UpdateAsync(entity.Id, closed.Record!.Id, """{"Status":"New"}"""));
+        Assert.Contains("terminal state", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_WithTransitions_NoValidation()
+    {
+        // On create, any valid option is allowed regardless of transitions
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "Ticket4" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Status",
+            DataType = FieldDataType.Choice,
+            OptionsJson = """["New","Open","Closed"]""",
+            TransitionsJson = """{"New":["Open"],"Open":["Closed"]}"""
+        });
+
+        var recSvc = CreateRecordService();
+        // Can create directly with "Closed" even though it's normally only reachable via Open
+        var result = await recSvc.CreateAsync(entity.Id, """{"Status":"Closed"}""");
+        Assert.True(result.Success);
+    }
+
     private class TestLifecycleHandler : Xrm.Core.Services.IRecordLifecycleHandler
     {
         public string? LastEvent { get; private set; }

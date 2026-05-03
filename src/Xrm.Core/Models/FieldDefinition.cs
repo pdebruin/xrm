@@ -25,6 +25,13 @@ public class FieldDefinition
     /// </summary>
     public string? OptionsJson { get; set; }
 
+    /// <summary>
+    /// JSON object defining allowed state transitions for Choice fields.
+    /// Format: {"CurrentState":["AllowedNext1","AllowedNext2"], ...}
+    /// When set, only defined transitions are permitted on update.
+    /// </summary>
+    public string? TransitionsJson { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = "system";
     public DateTime ModifiedAt { get; set; }

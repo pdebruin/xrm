@@ -105,7 +105,7 @@ else
                             <select class="form-select" value="@GetValue(field.Name)" 
                                     @onchange="(e) => SetValue(field.Name, e.Value)">
                                 <option value="">-- Select --</option>
-                                @foreach (var opt in GetOptions(field))
+                                @foreach (var opt in GetChoiceOptions(field))
                                 {
                                     <option value="@opt">@opt</option>
                                 }
@@ -542,6 +542,27 @@ else
         {
             return new();
         }
+    }
+
+    private List<string> GetChoiceOptions(FieldDefinition field)
+    {
+        var all = GetOptions(field);
+        if (string.IsNullOrEmpty(field.TransitionsJson) || _isNew) return all;
+
+        var current = GetValue(field.Name);
+        if (string.IsNullOrEmpty(current)) return all;
+
+        try
+        {
+            var transitions = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(field.TransitionsJson);
+            if (transitions is not null && transitions.TryGetValue(current, out var allowed))
+                return allowed.Where(a => all.Contains(a)).Prepend(current).Distinct().ToList();
+            // Terminal state — only show current value
+            if (transitions is not null && transitions.Count > 0)
+                return new List<string> { current };
+        }
+        catch (JsonException) { }
+        return all;
     }
 
     private string GetInputType(FieldDataType type) => type switch
