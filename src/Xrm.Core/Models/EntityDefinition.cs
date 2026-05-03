@@ -37,6 +37,12 @@ public class EntityDefinition
 
     public ICollection<FieldDefinition> Fields { get; set; } = new List<FieldDefinition>();
 
+    /// <summary>
+    /// JSON array of cross-field validation rules.
+    /// Supported types: "compare" (field vs field) and "required_if" (conditional required).
+    /// </summary>
+    public string? ValidationRulesJson { get; set; }
+
     [JsonIgnore]
     public ICollection<RelationshipDefinition> ParentRelationships { get; set; } = new List<RelationshipDefinition>();
     [JsonIgnore]

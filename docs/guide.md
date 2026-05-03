@@ -239,3 +239,27 @@ No configuration needed — audit is always on.
 
 Consumer applications can hook into record create/update/delete events to run
 business logic. See [lifecycle-hooks.md](lifecycle-hooks.md) for the full guide.
+
+Post-save hooks return warnings (not failures) via `SaveResult`. See [lifecycle-hooks.md](lifecycle-hooks.md#saveresult-and-warnings) for details.
+
+## State Machine Transitions
+
+Choice fields can optionally define allowed state transitions via `TransitionsJson` on `FieldDefinition`. The UI filters the dropdown and the server rejects invalid transitions on save. See [state-machines.md](state-machines.md) for configuration examples.
+
+## Cross-Field Validation
+
+Entities can define declarative rules that validate relationships between fields (e.g., end date > start date, conditional required fields). See [cross-field-validation.md](cross-field-validation.md) for rule types and examples.
+
+## Locale-Aware Formatting
+
+Date, number, and boolean values are formatted for display using `CultureInfo.CurrentCulture`. The host controls the locale — XRM respects it automatically. See [locale-formatting.md](locale-formatting.md) for setup options.
+
+## Audit Trail REST API
+
+In addition to the UI history panel, audit entries are available via the REST API:
+
+```
+GET /api/entities/{entityId}/records/{id}/history?limit=50
+```
+
+Returns the change log with timestamps, old/new values, and action type.

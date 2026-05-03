@@ -309,9 +309,102 @@ public class RecordService : IRecordService
             }
         }
 
+        // Cross-field validation rules
+        var entity = await db.EntityDefinitions.FindAsync(entityId);
+        if (entity?.ValidationRulesJson is not null)
+        {
+            try
+            {
+                var rules = System.Text.Json.JsonSerializer.Deserialize<List<Models.ValidationRule>>(
+                    entity.ValidationRulesJson,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+
+                foreach (var rule in rules)
+                {
+                    switch (rule.Type.ToLowerInvariant())
+                    {
+                        case "compare":
+                            ValidateCompareRule(rule, data, errors);
+                            break;
+                        case "required_if":
+                            ValidateRequiredIfRule(rule, data, errors);
+                            break;
+                    }
+                }
+            }
+            catch (System.Text.Json.JsonException) { }
+        }
+
         if (errors.Count > 0)
             throw new InvalidOperationException(string.Join("; ", errors));
     }
+
+    private static void ValidateCompareRule(Models.ValidationRule rule, Dictionary<string, System.Text.Json.JsonElement> data, List<string> errors)
+    {
+        if (string.IsNullOrEmpty(rule.OtherField)) return;
+
+        if (!data.TryGetValue(rule.Field, out var leftEl) || leftEl.ValueKind == System.Text.Json.JsonValueKind.Null) return;
+        if (!data.TryGetValue(rule.OtherField, out var rightEl) || rightEl.ValueKind == System.Text.Json.JsonValueKind.Null) return;
+
+        var leftStr = leftEl.ToString();
+        var rightStr = rightEl.ToString();
+
+        // Try date comparison first, then numeric
+        if (DateTime.TryParse(leftStr, out var leftDate) && DateTime.TryParse(rightStr, out var rightDate))
+        {
+            if (!CompareValues(leftDate.CompareTo(rightDate), rule.Operator))
+                errors.Add(rule.Message);
+        }
+        else if (double.TryParse(leftStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var leftNum)
+              && double.TryParse(rightStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var rightNum))
+        {
+            if (!CompareValues(leftNum.CompareTo(rightNum), rule.Operator))
+                errors.Add(rule.Message);
+        }
+        else
+        {
+            if (!CompareValues(string.Compare(leftStr, rightStr, StringComparison.Ordinal), rule.Operator))
+                errors.Add(rule.Message);
+        }
+    }
+
+    private static void ValidateRequiredIfRule(Models.ValidationRule rule, Dictionary<string, System.Text.Json.JsonElement> data, List<string> errors)
+    {
+        if (string.IsNullOrEmpty(rule.WhenField)) return;
+
+        // Check if the condition is met
+        if (!data.TryGetValue(rule.WhenField, out var whenEl)) return;
+        var whenStr = whenEl.ValueKind == System.Text.Json.JsonValueKind.Null ? "" : whenEl.ToString();
+        var conditionValue = rule.Value ?? "";
+
+        var conditionMet = rule.Operator.ToLowerInvariant() switch
+        {
+            "eq" => string.Equals(whenStr, conditionValue, StringComparison.OrdinalIgnoreCase),
+            "neq" => !string.Equals(whenStr, conditionValue, StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+
+        if (!conditionMet) return;
+
+        // Condition met — check that the target field has a value
+        var hasValue = data.TryGetValue(rule.Field, out var targetEl)
+            && targetEl.ValueKind != System.Text.Json.JsonValueKind.Null
+            && !(targetEl.ValueKind == System.Text.Json.JsonValueKind.String && string.IsNullOrWhiteSpace(targetEl.GetString()));
+
+        if (!hasValue)
+            errors.Add(rule.Message);
+    }
+
+    private static bool CompareValues(int comparison, string op) => op.ToLowerInvariant() switch
+    {
+        "gt" => comparison > 0,
+        "gte" => comparison >= 0,
+        "lt" => comparison < 0,
+        "lte" => comparison <= 0,
+        "eq" => comparison == 0,
+        "neq" => comparison != 0,
+        _ => true
+    };
 
     private static string? GetFieldValueFromJson(string json, string fieldName)
     {

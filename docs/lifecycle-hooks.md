@@ -116,3 +116,29 @@ For deletes: `OnDeleting` runs before the record is removed.
 - If a handler throws, the operation fails — no partial commit
 - Handlers are resolved via DI, so they can inject other services
 - XRM contains zero business logic — all domain rules live in your handlers
+
+## SaveResult and Warnings
+
+`CreateAsync` and `UpdateAsync` return a `SaveResult`:
+
+```csharp
+public record SaveResult(bool Success, Record? Record = null, List<string>? Warnings = null);
+```
+
+**Pre-save hooks** (`OnCreatingAsync`, `OnUpdatingAsync`) — if they throw, the save is aborted. The exception message becomes the validation error.
+
+**Post-save hooks** (`OnCreatedAsync`, `OnUpdatedAsync`) — if they throw, the record is still saved. The exception message is collected as a warning in `SaveResult.Warnings`.
+
+### Handling warnings in consumer code
+
+```csharp
+var result = await recordService.UpdateAsync(entityId, recordId, json);
+if (result.Warnings?.Count > 0)
+{
+    // Log or display warnings — record was saved successfully
+    foreach (var warning in result.Warnings)
+        logger.LogWarning("Post-save warning: {Warning}", warning);
+}
+```
+
+The Blazor UI shows warnings as a yellow banner. The REST API returns them via the `X-Warnings` response header.

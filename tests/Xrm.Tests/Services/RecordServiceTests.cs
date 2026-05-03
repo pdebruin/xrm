@@ -565,6 +565,108 @@ public class RecordServiceTests : ServiceTestBase
         Assert.True(result.Success);
     }
 
+    [Fact]
+    public async Task CrossFieldValidation_Compare_DateGt_Succeeds()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition
+        {
+            Name = "Contract",
+            ValidationRulesJson = """[{"type":"compare","field":"EndDate","operator":"gt","otherField":"StartDate","message":"End date must be after start date"}]"""
+        });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "StartDate", DataType = FieldDataType.Date, SortOrder = 1 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "EndDate", DataType = FieldDataType.Date, SortOrder = 2 });
+
+        var recSvc = CreateRecordService();
+        var result = await recSvc.CreateAsync(entity.Id, """{"StartDate":"2026-01-01","EndDate":"2026-12-31"}""");
+        Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task CrossFieldValidation_Compare_DateGt_Fails()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition
+        {
+            Name = "Contract2",
+            ValidationRulesJson = """[{"type":"compare","field":"EndDate","operator":"gt","otherField":"StartDate","message":"End date must be after start date"}]"""
+        });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "StartDate", DataType = FieldDataType.Date, SortOrder = 1 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "EndDate", DataType = FieldDataType.Date, SortOrder = 2 });
+
+        var recSvc = CreateRecordService();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{"StartDate":"2026-12-31","EndDate":"2026-01-01"}"""));
+        Assert.Contains("End date must be after start date", ex.Message);
+    }
+
+    [Fact]
+    public async Task CrossFieldValidation_RequiredIf_Triggers()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition
+        {
+            Name = "Complex",
+            ValidationRulesJson = """[{"type":"required_if","field":"VveNummer","whenField":"VveLidmaatschap","operator":"neq","value":"Nee","message":"VvE-nummer is required when VvE-lidmaatschap is not Nee"}]"""
+        });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "VveLidmaatschap", DataType = FieldDataType.Text, SortOrder = 1 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "VveNummer", DataType = FieldDataType.Text, SortOrder = 2 });
+
+        var recSvc = CreateRecordService();
+
+        // VveLidmaatschap = "Ja" but VveNummer is empty → should fail
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{"VveLidmaatschap":"Ja","VveNummer":""}"""));
+        Assert.Contains("VvE-nummer is required", ex.Message);
+    }
+
+    [Fact]
+    public async Task CrossFieldValidation_RequiredIf_NotTriggered()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition
+        {
+            Name = "Complex2",
+            ValidationRulesJson = """[{"type":"required_if","field":"VveNummer","whenField":"VveLidmaatschap","operator":"neq","value":"Nee","message":"VvE-nummer is required"}]"""
+        });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "VveLidmaatschap", DataType = FieldDataType.Text, SortOrder = 1 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "VveNummer", DataType = FieldDataType.Text, SortOrder = 2 });
+
+        var recSvc = CreateRecordService();
+
+        // VveLidmaatschap = "Nee" → VveNummer not required
+        var result = await recSvc.CreateAsync(entity.Id, """{"VveLidmaatschap":"Nee","VveNummer":""}""");
+        Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task CrossFieldValidation_NumericCompare_LteFails()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition
+        {
+            Name = "Werkorder",
+            ValidationRulesJson = """[{"type":"compare","field":"ActualHours","operator":"lte","otherField":"BudgetHours","message":"Actual hours cannot exceed budget"}]"""
+        });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "ActualHours", DataType = FieldDataType.Number, SortOrder = 1 });
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition { Name = "BudgetHours", DataType = FieldDataType.Number, SortOrder = 2 });
+
+        var recSvc = CreateRecordService();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{"ActualHours":10,"BudgetHours":8}"""));
+        Assert.Contains("Actual hours cannot exceed budget", ex.Message);
+    }
+
     private class TestLifecycleHandler : Xrm.Core.Services.IRecordLifecycleHandler
     {
         public string? LastEvent { get; private set; }
