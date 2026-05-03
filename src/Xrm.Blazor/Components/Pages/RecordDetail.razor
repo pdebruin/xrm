@@ -575,6 +575,9 @@ else
                 // Reload child sections (lifecycle hooks may have created/modified children)
                 foreach (var rel in _childRelationships)
                     await LoadChildSection(rel);
+                // Reload history if visible
+                if (_showHistory)
+                    _auditEntries = await AuditService.GetHistoryAsync(RecordId.Value);
                 _editing = false;
             }
         }
@@ -774,7 +777,7 @@ else
     private async Task ToggleHistory()
     {
         _showHistory = !_showHistory;
-        if (_showHistory && _auditEntries.Count == 0 && RecordId.HasValue)
+        if (_showHistory && RecordId.HasValue)
         {
             _auditEntries = await AuditService.GetHistoryAsync(RecordId.Value);
         }
