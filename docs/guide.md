@@ -250,6 +250,10 @@ Choice fields can optionally define allowed state transitions via `TransitionsJs
 
 Entities can define declarative rules that validate relationships between fields (e.g., end date > start date, conditional required fields). See [cross-field-validation.md](cross-field-validation.md) for rule types and examples.
 
+## Computed Fields
+
+Fields of type `Computed` evaluate an expression on every read. Supports arithmetic (`NettoHuur + Servicekosten`), literals (`Netto * 1.21`), and aggregates (`COUNT(Huurcontract)`, `SUM(Huurcontract.Maandhuur)`). See [computed-fields.md](computed-fields.md) for syntax and examples.
+
 ## Locale-Aware Formatting
 
 Date, number, and boolean values are formatted for display using `CultureInfo.CurrentCulture`. The host controls the locale — XRM respects it automatically. See [locale-formatting.md](locale-formatting.md) for setup options.
