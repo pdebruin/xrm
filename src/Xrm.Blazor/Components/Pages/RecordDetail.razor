@@ -572,6 +572,9 @@ else
             {
                 await RecordService.UpdateAsync(EntityId, RecordId!.Value, json);
                 await SaveParentLinks();
+                // Reload child sections (lifecycle hooks may have created/modified children)
+                foreach (var rel in _childRelationships)
+                    await LoadChildSection(rel);
                 _editing = false;
             }
         }
