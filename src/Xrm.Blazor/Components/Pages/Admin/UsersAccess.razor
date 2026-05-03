@@ -16,63 +16,100 @@
     return;
 }
 
-<div class="row">
-    <div class="col-md-8">
-        <h5>Known Users</h5>
-        <table class="table table-sm">
-            <thead>
-                <tr>
-                    <th>Email</th>
-                    <th>Display Name</th>
-                    <th>Last Seen</th>
-                    <th>Roles</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var user in _users)
-                {
-                    <tr>
-                        <td>@user.Email</td>
-                        <td>@user.DisplayName</td>
-                        <td>@user.LastSeenAt.ToString("g")</td>
-                        <td>
-                            @{
-                                var assignments = _assignments.Where(a => a.UserEmail == user.Email && a.IsActive).ToList();
-                            }
-                            @if (assignments.Count == 0)
-                            {
-                                <span class="text-muted">No roles</span>
-                            }
-                            else
-                            {
-                                @foreach (var a in assignments)
-                                {
-                                    <span class="badge bg-primary me-1">@a.Role@(a.Domain != null ? $" ({a.Domain})" : "")</span>
-                                }
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+@if (_selectedUser is null)
+{
+    <div class="mb-3">
+        <button class="btn btn-sm btn-outline-primary" @onclick="() => _showAddUser = !_showAddUser">+ Pre-assign user</button>
     </div>
 
-    <div class="col-md-4">
-        <h5>Assign Role</h5>
-        <div class="mb-2">
-            <label class="form-label">Email</label>
-            <input type="email" class="form-control form-control-sm" @bind="_newEmail" placeholder="user@example.com" />
+    @if (_showAddUser)
+    {
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="input-group input-group-sm">
+                    <input type="email" class="form-control" @bind="_newEmail" placeholder="user@example.com" />
+                    <button class="btn btn-primary" @onclick="PreAssignUser">Add</button>
+                </div>
+            </div>
         </div>
-        <div class="mb-2">
-            <label class="form-label">Role</label>
+    }
+
+    <div class="mb-2">
+        <input type="text" class="form-control form-control-sm" style="max-width:300px;" placeholder="Filter by email or name..." @bind="_filter" @bind:event="oninput" />
+    </div>
+
+    <table class="table table-sm table-hover">
+        <thead>
+            <tr>
+                <th style="cursor:pointer;" @onclick='() => SetSort("email")'>Email @SortIndicator("email")</th>
+                <th style="cursor:pointer;" @onclick='() => SetSort("name")'>Display Name @SortIndicator("name")</th>
+                <th style="cursor:pointer;" @onclick='() => SetSort("seen")'>Last Seen @SortIndicator("seen")</th>
+                <th>Roles</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in FilteredUsers)
+            {
+                <tr style="cursor:pointer;" @onclick="() => SelectUser(user)">
+                    <td>@user.Email</td>
+                    <td>@user.DisplayName</td>
+                    <td>@user.LastSeenAt.ToString("g")</td>
+                    <td>
+                        @{
+                            var userAssignments = _assignments.Where(a => a.UserEmail == user.Email && a.IsActive).ToList();
+                        }
+                        @if (userAssignments.Count == 0)
+                        {
+                            <span class="text-muted">No roles</span>
+                        }
+                        else
+                        {
+                            @foreach (var a in userAssignments)
+                            {
+                                <span class="badge bg-primary me-1">@a.Role@(a.Domain != null ? $" ({a.Domain})" : "")</span>
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <button class="btn btn-sm btn-outline-secondary mb-3" @onclick="() => _selectedUser = null">← Back to users</button>
+
+    <h5>@(_selectedUser.DisplayName ?? _selectedUser.Email)</h5>
+    <p class="text-muted">@_selectedUser.Email · Last seen @_selectedUser.LastSeenAt.ToString("g")</p>
+
+    <h6>Roles</h6>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Role</th><th>Domain</th><th>Assigned</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var a in _assignments.Where(a => a.UserEmail == _selectedUser.Email && a.IsActive))
+            {
+                <tr>
+                    <td>@a.Role</td>
+                    <td>@(a.Domain ?? "All domains")</td>
+                    <td>@a.AssignedAt.ToString("d") by @a.AssignedBy</td>
+                    <td><button class="btn btn-sm btn-outline-danger" @onclick="() => RevokeAssignment(a.Id)">Revoke</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h6>Add role</h6>
+    <div class="row">
+        <div class="col-md-3">
             <select class="form-select form-select-sm" @bind="_newRole">
                 <option value="Reader">Reader</option>
                 <option value="Writer">Writer</option>
                 <option value="SystemAdmin">SystemAdmin</option>
             </select>
         </div>
-        <div class="mb-2">
-            <label class="form-label">Domain (blank for all)</label>
+        <div class="col-md-3">
             <select class="form-select form-select-sm" @bind="_newDomain">
                 <option value="">— All domains —</option>
                 @foreach (var d in _domains)
@@ -81,42 +118,66 @@
                 }
             </select>
         </div>
-        <button class="btn btn-primary btn-sm" @onclick="AssignRole">Assign</button>
-
-        @if (!string.IsNullOrEmpty(_message))
-        {
-            <div class="alert alert-info mt-2">@_message</div>
-        }
-
-        <hr />
-        <h5>Active Assignments</h5>
-        <table class="table table-sm">
-            <thead>
-                <tr><th>Email</th><th>Role</th><th>Domain</th><th></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var a in _assignments.Where(x => x.IsActive))
-                {
-                    <tr>
-                        <td>@a.UserEmail</td>
-                        <td>@a.Role</td>
-                        <td>@(a.Domain ?? "All")</td>
-                        <td><button class="btn btn-sm btn-outline-danger" @onclick="() => RevokeAssignment(a.Id)">Revoke</button></td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="col-md-2">
+            <button class="btn btn-primary btn-sm" @onclick="AssignRoleToSelected">Assign</button>
+        </div>
     </div>
-</div>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="mt-2 text-success">@_message</div>
+    }
+}
 
 @code {
     private List<KnownUser> _users = new();
     private List<DomainAssignment> _assignments = new();
     private List<string> _domains = new();
+    private KnownUser? _selectedUser;
+    private bool _showAddUser;
     private string _newEmail = "";
     private string _newRole = "Reader";
     private string _newDomain = "";
     private string? _message;
+    private string _filter = "";
+    private string _sortColumn = "email";
+    private bool _sortAsc = true;
+
+    private IEnumerable<KnownUser> FilteredUsers
+    {
+        get
+        {
+            var q = _users.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_filter))
+            {
+                var f = _filter.Trim();
+                q = q.Where(u =>
+                    (u.Email?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (u.DisplayName?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+            q = _sortColumn switch
+            {
+                "name" => _sortAsc ? q.OrderBy(u => u.DisplayName) : q.OrderByDescending(u => u.DisplayName),
+                "seen" => _sortAsc ? q.OrderBy(u => u.LastSeenAt) : q.OrderByDescending(u => u.LastSeenAt),
+                _ => _sortAsc ? q.OrderBy(u => u.Email) : q.OrderByDescending(u => u.Email),
+            };
+            return q;
+        }
+    }
+
+    private void SetSort(string column)
+    {
+        if (_sortColumn == column)
+            _sortAsc = !_sortAsc;
+        else
+        {
+            _sortColumn = column;
+            _sortAsc = true;
+        }
+    }
+
+    private string SortIndicator(string column) =>
+        _sortColumn == column ? (_sortAsc ? "▲" : "▼") : "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,6 +230,56 @@
             assignment.IsActive = false;
             await db.SaveChangesAsync();
         }
+        await LoadData();
+    }
+
+    private void SelectUser(KnownUser user)
+    {
+        _selectedUser = user;
+        _message = null;
+    }
+
+    private async Task PreAssignUser()
+    {
+        if (string.IsNullOrWhiteSpace(_newEmail)) return;
+        var email = _newEmail.Trim().ToLowerInvariant();
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var exists = await db.Set<KnownUser>().AnyAsync(u => u.Email == email);
+        if (!exists)
+        {
+            db.Set<KnownUser>().Add(new KnownUser
+            {
+                Id = Guid.NewGuid(),
+                SubjectId = "",
+                Email = email,
+                DisplayName = null,
+                FirstSeenAt = DateTime.UtcNow,
+                LastSeenAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+        _newEmail = "";
+        _showAddUser = false;
+        await LoadData();
+    }
+
+    private async Task AssignRoleToSelected()
+    {
+        if (_selectedUser is null) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        db.Set<DomainAssignment>().Add(new DomainAssignment
+        {
+            Id = Guid.NewGuid(),
+            UserEmail = _selectedUser.Email,
+            Role = _newRole,
+            Domain = string.IsNullOrEmpty(_newDomain) ? null : _newDomain,
+            AssignedAt = DateTime.UtcNow,
+            AssignedBy = CurrentUser.Email ?? "system"
+        });
+        await db.SaveChangesAsync();
+        _message = $"Assigned {_newRole}";
         await LoadData();
     }
 }

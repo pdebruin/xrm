@@ -33,19 +33,23 @@ else if (_relationships.Count == 0)
 }
 else
 {
+    <div class="mb-2">
+        <input type="text" class="form-control form-control-sm" style="max-width:300px;" placeholder="Filter relationships..." @bind="_filter" @bind:event="oninput" />
+    </div>
+
     <table class="table table-sm table-hover">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Parent Entity</th>
-                <th>Child Entity</th>
+                <th style="cursor:pointer;" @onclick='() => SetSort("name")'>Name @SortIndicator("name")</th>
+                <th style="cursor:pointer;" @onclick='() => SetSort("parent")'>Parent Entity @SortIndicator("parent")</th>
+                <th style="cursor:pointer;" @onclick='() => SetSort("child")'>Child Entity @SortIndicator("child")</th>
                 <th>Type</th>
                 <th>On Delete</th>
                 <th></th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var rel in _relationships)
+            @foreach (var rel in FilteredRelationships)
             {
                 <tr>
                     <td>@(rel.DisplayName ?? rel.Name)</td>
@@ -140,6 +144,42 @@ else
     private Guid? _editingId;
     private RelForm _form = new();
     private string? _error;
+    private string _filter = "";
+    private string _sortColumn = "name";
+    private bool _sortAsc = true;
+
+    private IEnumerable<RelationshipDefinition> FilteredRelationships
+    {
+        get
+        {
+            var q = (_relationships ?? new()).AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_filter))
+            {
+                var f = _filter.Trim();
+                q = q.Where(r =>
+                    (r.Name?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (r.DisplayName?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (r.ParentEntity?.Name?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (r.ChildEntity?.Name?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+            q = _sortColumn switch
+            {
+                "parent" => _sortAsc ? q.OrderBy(r => r.ParentEntity?.Name) : q.OrderByDescending(r => r.ParentEntity?.Name),
+                "child" => _sortAsc ? q.OrderBy(r => r.ChildEntity?.Name) : q.OrderByDescending(r => r.ChildEntity?.Name),
+                _ => _sortAsc ? q.OrderBy(r => r.DisplayName ?? r.Name) : q.OrderByDescending(r => r.DisplayName ?? r.Name),
+            };
+            return q;
+        }
+    }
+
+    private void SetSort(string column)
+    {
+        if (_sortColumn == column) _sortAsc = !_sortAsc;
+        else { _sortColumn = column; _sortAsc = true; }
+    }
+
+    private string SortIndicator(string column) =>
+        _sortColumn == column ? (_sortAsc ? "▲" : "▼") : "";
 
     protected override async Task OnInitializedAsync()
     {

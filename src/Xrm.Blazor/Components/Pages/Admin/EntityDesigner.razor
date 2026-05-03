@@ -23,16 +23,30 @@
 }
 else
 {
-    <div class="entity-list">
-        @foreach (var entity in _entities)
-        {
-            <div class="card mb-2">
-                <div class="card-body d-flex align-items-center justify-content-between">
-                    <div>
-                        <h5 class="card-title mb-0">@(entity.DisplayName ?? entity.Name)</h5>
-                        <small class="text-muted">@entity.Name · @(entity.Fields?.Count ?? 0) fields</small>
-                    </div>
-                    <div>
+    <div class="mb-2">
+        <input type="text" class="form-control form-control-sm" style="max-width:300px;" placeholder="Filter entities..." @bind="_filter" @bind:event="oninput" />
+    </div>
+
+    <table class="table table-sm table-hover">
+        <thead>
+            <tr>
+                <th style="cursor:pointer;" @onclick='() => SetSort("name")'>Name @SortIndicator("name")</th>
+                <th style="cursor:pointer;" @onclick='() => SetSort("domain")'>Domain @SortIndicator("domain")</th>
+                <th>Fields</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entity in FilteredEntities)
+            {
+                <tr>
+                    <td>
+                        @(entity.DisplayName ?? entity.Name)
+                        <br/><small class="text-muted">@entity.Name</small>
+                    </td>
+                    <td>@(entity.Domain ?? "—")</td>
+                    <td>@(entity.Fields?.Count ?? 0)</td>
+                    <td class="text-end">
                         @if (entity.IsHomeEntity)
                         {
                             <span class="badge bg-success me-2">Home</span>
@@ -40,11 +54,11 @@ else
                         <a href="@($"admin/entities/{entity.Id}/fields")" class="btn btn-outline-secondary btn-sm me-1">Fields</a>
                         <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => EditEntity(entity)">Edit</button>
                         <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteEntity(entity.Id)">Delete</button>
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 
     <hr />
     <a href="admin/relationships" class="btn btn-outline-secondary">Manage Relationships</a>
@@ -115,6 +129,40 @@ else
     private List<FieldDefinition> _editingEntityFields = new();
     private EntityForm _form = new();
     private string? _error;
+    private string _filter = "";
+    private string _sortColumn = "name";
+    private bool _sortAsc = true;
+
+    private IEnumerable<EntityDefinition> FilteredEntities
+    {
+        get
+        {
+            var q = (_entities ?? new()).AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_filter))
+            {
+                var f = _filter.Trim();
+                q = q.Where(e =>
+                    (e.Name?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.DisplayName?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.Domain?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+            q = _sortColumn switch
+            {
+                "domain" => _sortAsc ? q.OrderBy(e => e.Domain) : q.OrderByDescending(e => e.Domain),
+                _ => _sortAsc ? q.OrderBy(e => e.DisplayName ?? e.Name) : q.OrderByDescending(e => e.DisplayName ?? e.Name),
+            };
+            return q;
+        }
+    }
+
+    private void SetSort(string column)
+    {
+        if (_sortColumn == column) _sortAsc = !_sortAsc;
+        else { _sortColumn = column; _sortAsc = true; }
+    }
+
+    private string SortIndicator(string column) =>
+        _sortColumn == column ? (_sortAsc ? "▲" : "▼") : "";
 
     protected override async Task OnInitializedAsync()
     {
