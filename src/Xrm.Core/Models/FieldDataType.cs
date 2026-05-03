@@ -13,5 +13,6 @@ public enum FieldDataType
     RichText,
     Email,
     Phone,
-    Url
+    Url,
+    AutoNumber
 }

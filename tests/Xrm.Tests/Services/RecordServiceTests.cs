@@ -335,6 +335,66 @@ public class RecordServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task Create_AutoNumber_GeneratesSequentialValues()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "AutoEnt" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Code", DataType = FieldDataType.AutoNumber,
+            DefaultValue = """{"prefix":"TST","width":3}"""
+        });
+
+        var recSvc = CreateRecordService();
+        var r1 = await recSvc.CreateAsync(entity.Id, "{}");
+        var r2 = await recSvc.CreateAsync(entity.Id, "{}");
+        var r3 = await recSvc.CreateAsync(entity.Id, "{}");
+
+        Assert.Contains("\"TST-001\"", r1.DataJson);
+        Assert.Contains("\"TST-002\"", r2.DataJson);
+        Assert.Contains("\"TST-003\"", r3.DataJson);
+    }
+
+    [Fact]
+    public async Task Create_AutoNumber_PureNumericWhenNoPrefix()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "AutoNum" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Seq", DataType = FieldDataType.AutoNumber,
+            DefaultValue = """{"prefix":"","width":5}"""
+        });
+
+        var recSvc = CreateRecordService();
+        var r1 = await recSvc.CreateAsync(entity.Id, "{}");
+        Assert.Contains("\"00001\"", r1.DataJson);
+    }
+
+    [Fact]
+    public async Task Create_AutoNumber_SkipsValidation()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "AutoSkip" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Num", DataType = FieldDataType.AutoNumber, IsRequired = true,
+            DefaultValue = """{"prefix":"X","width":3}"""
+        });
+
+        // Should not throw even though no value provided and field is "required"
+        var recSvc = CreateRecordService();
+        var rec = await recSvc.CreateAsync(entity.Id, "{}");
+        Assert.Contains("\"X-001\"", rec.DataJson);
+    }
+
+    [Fact]
     public async Task Create_NumericMinViolation_Throws()
     {
         var entitySvc = CreateEntityService();

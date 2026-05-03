@@ -12,6 +12,7 @@ public class XrmDbContext : DbContext
     public DbSet<RelationshipDefinition> RelationshipDefinitions => Set<RelationshipDefinition>();
     public DbSet<Record> Records => Set<Record>();
     public DbSet<RecordLink> RecordLinks => Set<RecordLink>();
+    public DbSet<AutoNumberSequence> AutoNumberSequences => Set<AutoNumberSequence>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -87,6 +88,17 @@ public class XrmDbContext : DbContext
             entity.HasOne(e => e.ChildRecord)
                 .WithMany(r => r.ChildLinks)
                 .HasForeignKey(e => e.ChildRecordId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AutoNumberSequence>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.FieldDefinitionId).IsUnique();
+
+            entity.HasOne(e => e.FieldDefinition)
+                .WithMany()
+                .HasForeignKey(e => e.FieldDefinitionId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

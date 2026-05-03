@@ -82,6 +82,11 @@ else
                     </label>
                     @switch (field.DataType)
                     {
+                        case FieldDataType.AutoNumber:
+                            <input type="text" class="form-control" value="@GetValue(field.Name)" 
+                                   readonly placeholder="(auto-generated)" />
+                            break;
+
                         case FieldDataType.Boolean:
                             <div class="form-check">
                                 <input type="checkbox" class="form-check-input" 

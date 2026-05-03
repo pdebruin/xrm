@@ -95,7 +95,7 @@ public class DemoDataSeeder : IDataSeeder
             new() { Id = Guid.NewGuid(), EntityDefinitionId = activity.Id, Name = "Notes", DisplayName = "Notes", DataType = FieldDataType.RichText, SortOrder = 6 },
 
             // Order fields (inspired by AWLT SalesOrderHeader)
-            new() { Id = Guid.NewGuid(), EntityDefinitionId = order.Id, Name = "OrderNumber", DisplayName = "Order Number", DataType = FieldDataType.Text, IsRequired = true, MaxLength = 50, SortOrder = 1 },
+            new() { Id = Guid.NewGuid(), EntityDefinitionId = order.Id, Name = "OrderNumber", DisplayName = "Order Number", DataType = FieldDataType.AutoNumber, DefaultValue = """{"prefix":"ORD","width":4}""", SortOrder = 1 },
             new() { Id = Guid.NewGuid(), EntityDefinitionId = order.Id, Name = "OrderDate", DisplayName = "Order Date", DataType = FieldDataType.Date, IsRequired = true, SortOrder = 2 },
             new() { Id = Guid.NewGuid(), EntityDefinitionId = order.Id, Name = "DueDate", DisplayName = "Due Date", DataType = FieldDataType.Date, SortOrder = 3 },
             new() { Id = Guid.NewGuid(), EntityDefinitionId = order.Id, Name = "Status", DisplayName = "Status", DataType = FieldDataType.Choice, OptionsJson = Json(new[] { "Draft", "Submitted", "In Progress", "Shipped", "Fulfilled", "Cancelled" }), SortOrder = 4 },
@@ -181,9 +181,9 @@ public class DemoDataSeeder : IDataSeeder
         var act3 = Rec(activity.Id, new { Subject = "Send pricing proposal to Fabricam", Type = "Email", DueDate = "2026-04-21T17:00:00", Priority = "High", Completed = true });
 
         // Orders
-        var order1 = Rec(order.Id, new { OrderNumber = "SO-71774", OrderDate = "2026-04-01", DueDate = "2026-04-15", Status = "Shipped", SubTotal = 7156.54, TaxAmount = 572.52, TotalDue = 7729.06, ShipMethod = "Express" });
-        var order2 = Rec(order.Id, new { OrderNumber = "SO-71776", OrderDate = "2026-04-10", DueDate = "2026-04-24", Status = "In Progress", SubTotal = 3399.99, TaxAmount = 272.00, TotalDue = 3671.99, ShipMethod = "Standard" });
-        var order3 = Rec(order.Id, new { OrderNumber = "SO-71780", OrderDate = "2026-04-18", DueDate = "2026-05-02", Status = "Draft", SubTotal = 2469.06, TaxAmount = 197.52, TotalDue = 2666.58, ShipMethod = "Standard" });
+        var order1 = Rec(order.Id, new { OrderNumber = "ORD-0001", OrderDate = "2026-04-01", DueDate = "2026-04-15", Status = "Shipped", SubTotal = 7156.54, TaxAmount = 572.52, TotalDue = 7729.06, ShipMethod = "Express" });
+        var order2 = Rec(order.Id, new { OrderNumber = "ORD-0002", OrderDate = "2026-04-10", DueDate = "2026-04-24", Status = "In Progress", SubTotal = 3399.99, TaxAmount = 272.00, TotalDue = 3671.99, ShipMethod = "Standard" });
+        var order3 = Rec(order.Id, new { OrderNumber = "ORD-0003", OrderDate = "2026-04-18", DueDate = "2026-05-02", Status = "Draft", SubTotal = 2469.06, TaxAmount = 197.52, TotalDue = 2666.58, ShipMethod = "Standard" });
 
         // Order Lines
         var line1a = Rec(orderLine.Id, new { ProductName = "Road-150 Red", Quantity = 2, UnitPrice = 3578.27, Discount = 0, LineTotal = 7156.54 });
@@ -229,6 +229,15 @@ public class DemoDataSeeder : IDataSeeder
             Link(orderLines.Id, order3.Id, line3b.Id),
             Link(orderLines.Id, order3.Id, line3c.Id)
         );
+
+        // Seed AutoNumber sequence (next value after seeded records)
+        var orderNumberField = fields.First(f => f.EntityDefinitionId == order.Id && f.Name == "OrderNumber");
+        db.AutoNumberSequences.Add(new AutoNumberSequence
+        {
+            Id = Guid.NewGuid(),
+            FieldDefinitionId = orderNumberField.Id,
+            NextValue = 4
+        });
 
         await db.SaveChangesAsync();
     }

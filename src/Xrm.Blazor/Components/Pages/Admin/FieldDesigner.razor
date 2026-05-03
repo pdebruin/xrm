@@ -135,6 +135,20 @@ else
                             <small class="text-muted">Enter each option on a separate line</small>
                         </div>
                     }
+
+                    @if (_form.DataType == FieldDataType.AutoNumber)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Prefix</label>
+                            <input class="form-control" @bind="_form.AutoNumberPrefix" placeholder="e.g. INV, ORD, GAR" />
+                            <small class="text-muted">Leave empty for pure numeric sequences</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Width (zero-padded digits)</label>
+                            <input type="number" class="form-control" @bind="_form.AutoNumberWidth" min="1" max="10" />
+                            <small class="text-muted">e.g. 3 → 001, 4 → 0001</small>
+                        </div>
+                    }
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
@@ -195,6 +209,21 @@ else
                 ? string.Join("\n", System.Text.Json.JsonSerializer.Deserialize<List<string>>(field.OptionsJson) ?? new())
                 : ""
         };
+
+        // Parse AutoNumber config from DefaultValue JSON
+        if (field.DataType == FieldDataType.AutoNumber && !string.IsNullOrEmpty(field.DefaultValue))
+        {
+            try
+            {
+                var doc = System.Text.Json.JsonDocument.Parse(field.DefaultValue);
+                if (doc.RootElement.TryGetProperty("prefix", out var p))
+                    _form.AutoNumberPrefix = p.GetString() ?? "";
+                if (doc.RootElement.TryGetProperty("width", out var w))
+                    _form.AutoNumberWidth = w.GetInt32();
+            }
+            catch { /* ignore parse errors */ }
+        }
+
         _showModal = true;
     }
 
@@ -209,6 +238,11 @@ else
                     _form.OptionsText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList())
                 : null;
 
+            // For AutoNumber, store config as JSON in DefaultValue
+            var defaultValue = _form.DataType == FieldDataType.AutoNumber
+                ? System.Text.Json.JsonSerializer.Serialize(new { prefix = _form.AutoNumberPrefix.Trim(), width = _form.AutoNumberWidth })
+                : string.IsNullOrWhiteSpace(_form.DefaultValue) ? null : _form.DefaultValue;
+
             var field = new FieldDefinition
             {
                 Id = _editingId ?? Guid.Empty,
@@ -216,9 +250,9 @@ else
                 Name = _form.Name,
                 DisplayName = string.IsNullOrWhiteSpace(_form.DisplayName) ? null : _form.DisplayName,
                 DataType = _form.DataType,
-                IsRequired = _form.IsRequired,
+                IsRequired = _form.DataType == FieldDataType.AutoNumber ? false : _form.IsRequired,
                 SortOrder = _form.SortOrder,
-                DefaultValue = string.IsNullOrWhiteSpace(_form.DefaultValue) ? null : _form.DefaultValue,
+                DefaultValue = defaultValue,
                 MaxLength = _form.MaxLength,
                 MinValue = _form.MinValue,
                 MaxValue = _form.MaxValue,
@@ -274,5 +308,7 @@ else
         public double? MaxValue { get; set; }
         public string Pattern { get; set; } = "";
         public string OptionsText { get; set; } = "";
+        public string AutoNumberPrefix { get; set; } = "";
+        public int AutoNumberWidth { get; set; } = 4;
     }
 }

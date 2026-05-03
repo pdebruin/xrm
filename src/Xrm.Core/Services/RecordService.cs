@@ -88,6 +88,9 @@ public class RecordService : IRecordService
         await using var db = await _dbFactory.CreateDbContextAsync();
         await ValidateRecordData(db, entityId, dataJson);
 
+        // Generate AutoNumber values
+        dataJson = await ApplyAutoNumbers(db, entityId, dataJson);
+
         var record = new Record
         {
             Id = Guid.NewGuid(),
@@ -134,6 +137,9 @@ public class RecordService : IRecordService
 
         foreach (var field in fields)
         {
+            // AutoNumber fields are system-generated; skip validation
+            if (field.DataType == FieldDataType.AutoNumber) continue;
+
             var hasValue = data.TryGetValue(field.Name, out var val)
                 && val.ValueKind != System.Text.Json.JsonValueKind.Null
                 && !(val.ValueKind == System.Text.Json.JsonValueKind.String && string.IsNullOrWhiteSpace(val.GetString()))
@@ -267,4 +273,59 @@ public class RecordService : IRecordService
         await db.SaveChangesAsync();
         return true;
     }
+
+    private async Task<string> ApplyAutoNumbers(XrmDbContext db, Guid entityId, string dataJson)
+    {
+        var autoFields = await db.FieldDefinitions
+            .Where(f => f.EntityDefinitionId == entityId && f.DataType == FieldDataType.AutoNumber)
+            .ToListAsync();
+
+        if (autoFields.Count == 0) return dataJson;
+
+        var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(dataJson) ?? new();
+
+        foreach (var field in autoFields)
+        {
+            var config = ParseAutoNumberConfig(field.DefaultValue);
+
+            // Get or create sequence
+            var seq = await db.AutoNumberSequences
+                .FirstOrDefaultAsync(s => s.FieldDefinitionId == field.Id);
+            if (seq is null)
+            {
+                seq = new AutoNumberSequence { Id = Guid.NewGuid(), FieldDefinitionId = field.Id, NextValue = 1 };
+                db.AutoNumberSequences.Add(seq);
+            }
+
+            // Generate formatted value
+            var number = seq.NextValue.ToString().PadLeft(config.Width, '0');
+            var value = string.IsNullOrEmpty(config.Prefix) ? number : $"{config.Prefix}-{number}";
+
+            data[field.Name] = value;
+            seq.NextValue++;
+        }
+
+        return System.Text.Json.JsonSerializer.Serialize(data);
+    }
+
+    private static AutoNumberConfig ParseAutoNumberConfig(string? defaultValue)
+    {
+        if (string.IsNullOrEmpty(defaultValue))
+            return new AutoNumberConfig("", 4);
+
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(defaultValue);
+            var root = doc.RootElement;
+            var prefix = root.TryGetProperty("prefix", out var p) ? p.GetString() ?? "" : "";
+            var width = root.TryGetProperty("width", out var w) ? w.GetInt32() : 4;
+            return new AutoNumberConfig(prefix, width);
+        }
+        catch
+        {
+            return new AutoNumberConfig("", 4);
+        }
+    }
+
+    private record AutoNumberConfig(string Prefix, int Width);
 }
