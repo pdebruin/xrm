@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Xrm.Blazor.Components;
 using Xrm.Core;
 using Xrm.Core.Data;
 using Xrm.Server;
+using Xrm.Server.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,7 +53,8 @@ app.UseAntiforgery();
 app.MapControllers();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(typeof(Xrm.Blazor.Components.App).Assembly);
 
 app.Run();
 
