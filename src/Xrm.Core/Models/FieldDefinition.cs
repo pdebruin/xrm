@@ -14,6 +14,7 @@ public class FieldDefinition
     public int SortOrder { get; set; }
 
     // Constraints stored as JSON
+    public int? MinLength { get; set; }
     public int? MaxLength { get; set; }
     public double? MinValue { get; set; }
     public double? MaxValue { get; set; }

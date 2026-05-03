@@ -262,6 +262,24 @@ public class RecordServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task Create_MinLengthNotMet_Throws()
+    {
+        var entitySvc = CreateEntityService();
+        var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "MinLen" });
+
+        var fieldSvc = CreateFieldService();
+        await fieldSvc.CreateAsync(entity.Id, new FieldDefinition
+        {
+            Name = "Omschrijving", DataType = FieldDataType.Text, MinLength = 10
+        });
+
+        var recSvc = CreateRecordService();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => recSvc.CreateAsync(entity.Id, """{"Omschrijving":"kort"}"""));
+        Assert.Contains("at least 10 characters", ex.Message);
+    }
+
+    [Fact]
     public async Task Create_InvalidChoiceValue_Throws()
     {
         var entitySvc = CreateEntityService();

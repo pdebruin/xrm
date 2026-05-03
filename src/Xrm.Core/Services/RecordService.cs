@@ -383,6 +383,9 @@ public class RecordService : IRecordService
 
             var strVal = val.ToString();
 
+            if (field.MinLength.HasValue && strVal.Length < field.MinLength.Value)
+                errors.Add($"'{field.DisplayName ?? field.Name}' must be at least {field.MinLength.Value} characters");
+
             if (field.MaxLength.HasValue && strVal.Length > field.MaxLength.Value)
                 errors.Add($"'{field.DisplayName ?? field.Name}' exceeds max length of {field.MaxLength.Value}");
 
