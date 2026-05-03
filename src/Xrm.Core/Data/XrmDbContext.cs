@@ -14,6 +14,8 @@ public class XrmDbContext : DbContext
     public DbSet<RecordLink> RecordLinks => Set<RecordLink>();
     public DbSet<AutoNumberSequence> AutoNumberSequences => Set<AutoNumberSequence>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<KnownUser> KnownUsers => Set<KnownUser>();
+    public DbSet<DomainAssignment> DomainAssignments => Set<DomainAssignment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -110,6 +112,26 @@ public class XrmDbContext : DbContext
             entity.HasIndex(e => e.Timestamp);
             entity.Property(e => e.Action).HasMaxLength(20).IsRequired();
             entity.Property(e => e.UserId).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<KnownUser>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasIndex(e => e.SubjectId);
+            entity.Property(e => e.Email).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.SubjectId).HasMaxLength(500);
+            entity.Property(e => e.DisplayName).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<DomainAssignment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserEmail);
+            entity.Property(e => e.UserEmail).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Role).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Domain).HasMaxLength(100);
+            entity.Property(e => e.AssignedBy).HasMaxLength(200);
         });
     }
 

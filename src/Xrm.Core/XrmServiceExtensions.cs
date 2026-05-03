@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xrm.Core.Data;
 using Xrm.Core.Services;
 
@@ -26,6 +27,9 @@ public static class XrmServiceExtensions
         services.AddScoped<IRelationshipService, RelationshipService>();
         services.AddScoped<IRecordService, RecordService>();
         services.AddScoped<IAuditService, AuditService>();
+
+        // Default: permit all access (no auth configured). Overridden by AddXrmAuthorization().
+        services.TryAddScoped<ICurrentUser, AnonymousCurrentUser>();
 
         return services;
     }

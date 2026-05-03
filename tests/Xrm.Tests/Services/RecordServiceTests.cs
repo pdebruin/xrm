@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Xrm.Core.Models;
+using Xrm.Core.Services;
 using Xrm.Tests.Infrastructure;
 
 namespace Xrm.Tests.Services;
@@ -459,7 +460,7 @@ public class RecordServiceTests : ServiceTestBase
     {
         var entityId = await CreateEntityWithFieldsAsync();
         var handler = new TestLifecycleHandler();
-        var svc = new Xrm.Core.Services.RecordService(DbFactory, new[] { handler });
+        var svc = new Xrm.Core.Services.RecordService(DbFactory, new[] { handler }, new AnonymousCurrentUser());
 
         var result = await svc.CreateAsync(entityId, """{"Name":"Original"}""");
 
@@ -474,7 +475,7 @@ public class RecordServiceTests : ServiceTestBase
     {
         var entityId = await CreateEntityWithFieldsAsync();
         var handler = new TestLifecycleHandler();
-        var svc = new Xrm.Core.Services.RecordService(DbFactory, new[] { handler });
+        var svc = new Xrm.Core.Services.RecordService(DbFactory, new[] { handler }, new AnonymousCurrentUser());
 
         var result = await svc.CreateAsync(entityId, """{"Name":"V1"}""");
         await svc.UpdateAsync(entityId, result.Record!.Id, """{"Name":"V2"}""");

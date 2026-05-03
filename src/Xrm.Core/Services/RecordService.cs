@@ -8,16 +8,39 @@ public class RecordService : IRecordService
 {
     private readonly IDbContextFactory<XrmDbContext> _dbFactory;
     private readonly IEnumerable<IRecordLifecycleHandler> _lifecycleHandlers;
+    private readonly ICurrentUser _currentUser;
 
-    public RecordService(IDbContextFactory<XrmDbContext> dbFactory, IEnumerable<IRecordLifecycleHandler> lifecycleHandlers)
+    public RecordService(IDbContextFactory<XrmDbContext> dbFactory, IEnumerable<IRecordLifecycleHandler> lifecycleHandlers, ICurrentUser currentUser)
     {
         _dbFactory = dbFactory;
         _lifecycleHandlers = lifecycleHandlers;
+        _currentUser = currentUser;
+    }
+
+    private async Task<string?> GetEntityDomain(XrmDbContext db, Guid entityId)
+    {
+        var entity = await db.EntityDefinitions.FindAsync(entityId);
+        return entity?.Domain;
+    }
+
+    private async Task EnsureReadAccess(XrmDbContext db, Guid entityId)
+    {
+        var domain = await GetEntityDomain(db, entityId);
+        if (!_currentUser.CanRead(domain))
+            throw new UnauthorizedAccessException($"Access denied: cannot read in domain '{domain}'");
+    }
+
+    private async Task EnsureWriteAccess(XrmDbContext db, Guid entityId)
+    {
+        var domain = await GetEntityDomain(db, entityId);
+        if (!_currentUser.CanWrite(domain))
+            throw new UnauthorizedAccessException($"Access denied: cannot write in domain '{domain}'");
     }
 
     public async Task<RecordPage> GetAllAsync(Guid entityId, int page = 1, int pageSize = 25, string? sortField = null, string sortDir = "asc", string? filter = null)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
+        await EnsureReadAccess(db, entityId);
         var query = db.Records.Where(r => r.EntityDefinitionId == entityId);
 
         var computedFields = await db.FieldDefinitions
@@ -238,6 +261,7 @@ public class RecordService : IRecordService
     public async Task<Record?> GetByIdAsync(Guid entityId, Guid id)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
+        await EnsureReadAccess(db, entityId);
         var record = await db.Records
             .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId);
         if (record is null) return null;
@@ -254,6 +278,7 @@ public class RecordService : IRecordService
     public async Task<SaveResult> CreateAsync(Guid entityId, string dataJson)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
+        await EnsureWriteAccess(db, entityId);
         var entity = await db.EntityDefinitions.FindAsync(entityId)
             ?? throw new InvalidOperationException($"Entity {entityId} not found");
 
@@ -300,6 +325,7 @@ public class RecordService : IRecordService
     public async Task<SaveResult> UpdateAsync(Guid entityId, Guid id, string dataJson)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
+        await EnsureWriteAccess(db, entityId);
         var record = await db.Records
             .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId);
         if (record is null) return new SaveResult(false);
@@ -557,6 +583,7 @@ public class RecordService : IRecordService
     public async Task<bool> DeleteAsync(Guid entityId, Guid id)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
+        await EnsureWriteAccess(db, entityId);
         var record = await db.Records
             .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId);
         if (record is null) return false;

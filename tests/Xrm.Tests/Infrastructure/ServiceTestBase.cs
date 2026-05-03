@@ -36,7 +36,7 @@ public class ServiceTestBase : IDisposable
     protected EntityService CreateEntityService() => new(DbFactory, new DemoDataSeeder());
     protected FieldService CreateFieldService() => new(DbFactory);
     protected RelationshipService CreateRelationshipService() => new(DbFactory);
-    protected RecordService CreateRecordService() => new(DbFactory, Array.Empty<IRecordLifecycleHandler>());
+    protected RecordService CreateRecordService() => new(DbFactory, Array.Empty<IRecordLifecycleHandler>(), new AnonymousCurrentUser());
     protected AuditService CreateAuditService() => new(DbFactory);
 
     public void Dispose()

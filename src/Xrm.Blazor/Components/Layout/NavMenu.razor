@@ -1,6 +1,7 @@
 @using Xrm.Core.Models
 @using Xrm.Core.Services
 @inject IEntityService EntityService
+@inject ICurrentUser CurrentUser
 @rendermode InteractiveServer
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -84,6 +85,11 @@
                     <span class="bi bi-diagram-nav-menu" aria-hidden="true"></span> Relationships
                 </NavLink>
             </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/users">
+                    <span class="bi bi-people-nav-menu" aria-hidden="true"></span> Users & Access
+                </NavLink>
+            </div>
         }
     </nav>
 </div>
@@ -96,7 +102,8 @@
     {
         try
         {
-            _entities = await EntityService.GetAllAsync();
+            var all = await EntityService.GetAllAsync();
+            _entities = all.Where(e => CurrentUser.CanRead(e.Domain)).ToList();
         }
         catch
         {

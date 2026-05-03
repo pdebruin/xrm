@@ -267,3 +267,13 @@ GET /api/entities/{entityId}/records/{id}/history?limit=50
 ```
 
 Returns the change log with timestamps, old/new values, and action type.
+
+## Authorization
+
+XRM provides domain-based access control. Entities are scoped to domains; users get Reader/Writer/SystemAdmin roles per domain. See [docs/authorization.md](authorization.md) for full setup.
+
+Key points:
+- Call `AddXrmAuthorization()` after `AddXrmCore()` to enable
+- Configure any OIDC provider (Entra ID, Google, etc.) — XRM is provider-agnostic
+- Admin UI at `/admin/users` for role management
+- Without `AddXrmAuthorization()`, all access is permitted (dev mode)

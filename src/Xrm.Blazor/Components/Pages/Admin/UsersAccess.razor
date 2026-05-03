@@ -1,0 +1,174 @@
+@page "/admin/users"
+@using Microsoft.EntityFrameworkCore
+@using Xrm.Core.Data
+@using Xrm.Core.Models
+@using Xrm.Core.Services
+@inject IDbContextFactory<XrmDbContext> DbFactory
+@inject ICurrentUser CurrentUser
+
+<PageTitle>Users & Access</PageTitle>
+
+<h3>Users & Access</h3>
+
+@if (!CurrentUser.IsSystemAdmin)
+{
+    <div class="alert alert-danger">Access denied. SystemAdmin role required.</div>
+    return;
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <h5>Known Users</h5>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Display Name</th>
+                    <th>Last Seen</th>
+                    <th>Roles</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in _users)
+                {
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>@user.DisplayName</td>
+                        <td>@user.LastSeenAt.ToString("g")</td>
+                        <td>
+                            @{
+                                var assignments = _assignments.Where(a => a.UserEmail == user.Email && a.IsActive).ToList();
+                            }
+                            @if (assignments.Count == 0)
+                            {
+                                <span class="text-muted">No roles</span>
+                            }
+                            else
+                            {
+                                @foreach (var a in assignments)
+                                {
+                                    <span class="badge bg-primary me-1">@a.Role@(a.Domain != null ? $" ({a.Domain})" : "")</span>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="col-md-4">
+        <h5>Assign Role</h5>
+        <div class="mb-2">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control form-control-sm" @bind="_newEmail" placeholder="user@example.com" />
+        </div>
+        <div class="mb-2">
+            <label class="form-label">Role</label>
+            <select class="form-select form-select-sm" @bind="_newRole">
+                <option value="Reader">Reader</option>
+                <option value="Writer">Writer</option>
+                <option value="SystemAdmin">SystemAdmin</option>
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label">Domain (blank for all)</label>
+            <select class="form-select form-select-sm" @bind="_newDomain">
+                <option value="">— All domains —</option>
+                @foreach (var d in _domains)
+                {
+                    <option value="@d">@d</option>
+                }
+            </select>
+        </div>
+        <button class="btn btn-primary btn-sm" @onclick="AssignRole">Assign</button>
+
+        @if (!string.IsNullOrEmpty(_message))
+        {
+            <div class="alert alert-info mt-2">@_message</div>
+        }
+
+        <hr />
+        <h5>Active Assignments</h5>
+        <table class="table table-sm">
+            <thead>
+                <tr><th>Email</th><th>Role</th><th>Domain</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var a in _assignments.Where(x => x.IsActive))
+                {
+                    <tr>
+                        <td>@a.UserEmail</td>
+                        <td>@a.Role</td>
+                        <td>@(a.Domain ?? "All")</td>
+                        <td><button class="btn btn-sm btn-outline-danger" @onclick="() => RevokeAssignment(a.Id)">Revoke</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<KnownUser> _users = new();
+    private List<DomainAssignment> _assignments = new();
+    private List<string> _domains = new();
+    private string _newEmail = "";
+    private string _newRole = "Reader";
+    private string _newDomain = "";
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _users = await db.Set<KnownUser>().OrderBy(u => u.Email).ToListAsync();
+        _assignments = await db.Set<DomainAssignment>().OrderBy(a => a.UserEmail).ToListAsync();
+        _domains = await db.EntityDefinitions
+            .Where(e => e.Domain != null)
+            .Select(e => e.Domain!)
+            .Distinct()
+            .OrderBy(d => d)
+            .ToListAsync();
+    }
+
+    private async Task AssignRole()
+    {
+        if (string.IsNullOrWhiteSpace(_newEmail))
+        {
+            _message = "Email is required.";
+            return;
+        }
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        db.Set<DomainAssignment>().Add(new DomainAssignment
+        {
+            Id = Guid.NewGuid(),
+            UserEmail = _newEmail.Trim().ToLowerInvariant(),
+            Role = _newRole,
+            Domain = string.IsNullOrEmpty(_newDomain) ? null : _newDomain,
+            AssignedAt = DateTime.UtcNow,
+            AssignedBy = CurrentUser.Email ?? "system"
+        });
+        await db.SaveChangesAsync();
+        _message = $"Assigned {_newRole} to {_newEmail}";
+        _newEmail = "";
+        await LoadData();
+    }
+
+    private async Task RevokeAssignment(Guid id)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var assignment = await db.Set<DomainAssignment>().FindAsync(id);
+        if (assignment is not null)
+        {
+            assignment.IsActive = false;
+            await db.SaveChangesAsync();
+        }
+        await LoadData();
+    }
+}
