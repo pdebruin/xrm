@@ -1,59 +1,14 @@
 @using Xrm.Core.Models
 @using Xrm.Core.Services
-@using Xrm.Core.Data
-@using Microsoft.EntityFrameworkCore
 @inject IEntityService EntityService
 @inject ICurrentUser CurrentUser
-@inject IDbContextFactory<XrmDbContext> DbFactory
 @rendermode InteractiveServer
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">XRM</a>
-        @if (CurrentUser.IsAuthenticated)
-        {
-            <div class="ms-auto user-chip" @onclick="() => _showUserPanel = !_showUserPanel">
-                <span class="user-chip-name">@(CurrentUser.DisplayName ?? CurrentUser.Email)</span>
-                @if (CurrentUser.IsSystemAdmin)
-                {
-                    <span class="badge bg-warning text-dark ms-1">Admin</span>
-                }
-            </div>
-        }
     </div>
 </div>
-
-@if (_showUserPanel)
-{
-    <div class="user-panel">
-        <div class="user-panel-header">
-            <strong>@(CurrentUser.DisplayName ?? "User")</strong>
-            <button class="btn-close btn-close-white btn-sm" @onclick="() => _showUserPanel = false"></button>
-        </div>
-        <div class="user-panel-body">
-            <div class="mb-2"><small class="text-muted">Email</small><br/>@CurrentUser.Email</div>
-            @if (_assignments.Count > 0)
-            {
-                <div class="mb-2">
-                    <small class="text-muted">Roles</small>
-                    @foreach (var a in _assignments)
-                    {
-                        <div>
-                            <span class="badge bg-primary me-1">@a.Role</span>
-                            <span class="text-muted">@(a.Domain ?? "All domains")</span>
-                        </div>
-                    }
-                </div>
-            }
-            else if (!CurrentUser.IsSystemAdmin)
-            {
-                <div class="text-muted mb-2">No roles assigned</div>
-            }
-            <hr class="my-2" />
-            <a href="authentication/logout" class="btn btn-sm btn-outline-light w-100">Sign out</a>
-        </div>
-    </div>
-}
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
@@ -142,8 +97,6 @@
 @code {
     private List<EntityDefinition>? _entities;
     private HashSet<string> _collapsedGroups = new();
-    private bool _showUserPanel;
-    private List<DomainAssignment> _assignments = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -155,19 +108,6 @@
         catch
         {
             _entities = new();
-        }
-
-        if (CurrentUser.IsAuthenticated && CurrentUser.Email is not null)
-        {
-            try
-            {
-                await using var db = await DbFactory.CreateDbContextAsync();
-                var email = CurrentUser.Email.ToLowerInvariant();
-                _assignments = await db.Set<DomainAssignment>()
-                    .Where(a => a.UserEmail == email && a.IsActive)
-                    .ToListAsync();
-            }
-            catch { }
         }
     }
 

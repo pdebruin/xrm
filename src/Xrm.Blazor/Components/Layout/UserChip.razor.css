@@ -1,0 +1,50 @@
+.user-chip-wrapper {
+    position: relative;
+}
+
+.user-chip {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    transition: background-color 0.15s;
+}
+
+.user-chip:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.user-chip-name {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-panel {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 260px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    margin-top: 0.25rem;
+}
+
+.user-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem 0.25rem;
+    border-bottom: 1px solid #eee;
+}
+
+.user-panel-body {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+}

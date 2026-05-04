@@ -1,0 +1,73 @@
+@using Xrm.Core.Models
+@using Xrm.Core.Services
+@using Xrm.Core.Data
+@using Microsoft.EntityFrameworkCore
+@inject ICurrentUser CurrentUser
+@inject IDbContextFactory<XrmDbContext> DbFactory
+@rendermode InteractiveServer
+
+@if (CurrentUser.IsAuthenticated)
+{
+    <div class="user-chip-wrapper">
+        <div class="user-chip" @onclick="() => _showPanel = !_showPanel">
+            <span class="user-chip-name">@(CurrentUser.DisplayName ?? CurrentUser.Email)</span>
+            @if (CurrentUser.IsSystemAdmin)
+            {
+                <span class="badge bg-warning text-dark ms-1">Admin</span>
+            }
+        </div>
+
+        @if (_showPanel)
+        {
+            <div class="user-panel">
+                <div class="user-panel-header">
+                    <strong>@(CurrentUser.DisplayName ?? "User")</strong>
+                    <button class="btn-close btn-sm" @onclick="() => _showPanel = false"></button>
+                </div>
+                <div class="user-panel-body">
+                    <div class="mb-2"><small class="text-muted">Email</small><br />@CurrentUser.Email</div>
+                    @if (_assignments.Count > 0)
+                    {
+                        <div class="mb-2">
+                            <small class="text-muted">Roles</small>
+                            @foreach (var a in _assignments)
+                            {
+                                <div>
+                                    <span class="badge bg-primary me-1">@a.Role</span>
+                                    <span class="text-muted">@(a.Domain ?? "All domains")</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (!CurrentUser.IsSystemAdmin)
+                    {
+                        <div class="text-muted mb-2">No roles assigned</div>
+                    }
+                    <hr class="my-2" />
+                    <a href="authentication/logout" class="btn btn-sm btn-outline-secondary w-100">Sign out</a>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool _showPanel;
+    private List<DomainAssignment> _assignments = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (CurrentUser.IsAuthenticated && CurrentUser.Email is not null)
+        {
+            try
+            {
+                await using var db = await DbFactory.CreateDbContextAsync();
+                var email = CurrentUser.Email.ToLowerInvariant();
+                _assignments = await db.Set<DomainAssignment>()
+                    .Where(a => a.UserEmail == email && a.IsActive)
+                    .ToListAsync();
+            }
+            catch { }
+        }
+    }
+}
