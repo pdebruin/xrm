@@ -2,10 +2,17 @@
 @using Xrm.Core.Models
 @using Xrm.Core.Services
 @inject IEntityService EntityService
+@inject ICurrentUser CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
 <PageTitle>XRM</PageTitle>
+
+@if (!CurrentUser.IsSystemAdmin)
+{
+    <div class="alert alert-danger">Access denied. SystemAdmin role required.</div>
+    return;
+}
 
 <div class="admin-header">
     <h2>Schema Designer</h2>

@@ -3,10 +3,17 @@
 @using Xrm.Core.Services
 @inject IEntityService EntityService
 @inject IRelationshipService RelationshipService
+@inject ICurrentUser CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
 <PageTitle>XRM</PageTitle>
+
+@if (!CurrentUser.IsSystemAdmin)
+{
+    <div class="alert alert-danger">Access denied. SystemAdmin role required.</div>
+    return;
+}
 
 <div class="detail-header">
     <button class="btn btn-link" @onclick="GoBack">← Back to Entities</button>
