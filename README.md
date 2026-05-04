@@ -4,7 +4,7 @@
 
 ## Why
 
-Some say "SaaS is dead" — that AI lets us generate software faster than buying it.
+Some say that AI lets us generate software faster than buying it.
 XRM is an experiment to test that claim: can we build a usable, self-hosted
 platform from requirements to working app in a single AI-assisted session?
 
@@ -15,7 +15,7 @@ generated for you. The difference is it's a real web app with an API.
 
 It could be a CRM, a sports team tracker, an inventory system, or anything else.
 
-Whether this proves "SaaS is dead" — well, we built the *scaffolding* fast.
+Whether this proves it — well, we built the *scaffolding* fast.
 What takes time is the polish: auth, permissions, proper error handling, scale,
 and the thousand edge cases real users find. But as a proof of concept for
 AI-assisted development speed, it's pretty compelling.
