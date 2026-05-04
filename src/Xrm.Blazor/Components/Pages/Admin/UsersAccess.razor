@@ -5,10 +5,11 @@
 @using Xrm.Core.Services
 @inject IDbContextFactory<XrmDbContext> DbFactory
 @inject ICurrentUser CurrentUser
+@rendermode InteractiveServer
 
-<PageTitle>Users & Access</PageTitle>
+<PageTitle>Security</PageTitle>
 
-<h3>Users & Access</h3>
+<h3>Security</h3>
 
 @if (!CurrentUser.IsSystemAdmin)
 {
