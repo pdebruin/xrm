@@ -5,6 +5,7 @@
 @using Xrm.Blazor.Helpers
 @inject IEntityService EntityService
 @inject IRecordService RecordService
+@inject ICurrentUser CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
@@ -18,7 +19,10 @@ else
 {
     <div class="master-header">
         <h2>@(_entityDef.PluralName ?? _entityDef.DisplayName ?? _entityDef.Name)</h2>
-        <button class="btn btn-primary btn-sm" @onclick="CreateNew">+ New</button>
+        @if (_canWrite)
+        {
+            <button class="btn btn-primary btn-sm" @onclick="CreateNew">+ New</button>
+        }
     </div>
 
     <div class="master-toolbar">
@@ -62,7 +66,10 @@ else
                                 <td>@GetDisplayValue(data, field)</td>
                             }
                             <td>
-                                <button class="btn btn-link btn-sm text-danger" @onclick:stopPropagation="true" @onclick="() => DeleteRecord(record.Id)">✕</button>
+                                @if (_canWrite)
+                                {
+                                    <button class="btn btn-link btn-sm text-danger" @onclick:stopPropagation="true" @onclick="() => DeleteRecord(record.Id)">✕</button>
+                                }
                             </td>
                         </tr>
                     }
@@ -73,7 +80,7 @@ else
 
     <div class="master-footer">
         <span>@_total records</span>
-        @if (_selected.Count > 0)
+        @if (_selected.Count > 0 && _canWrite)
         {
             <span class="ms-3">@_selected.Count selected</span>
             <button class="btn btn-outline-danger btn-sm ms-2" @onclick="DeleteSelected">Delete Selected</button>
@@ -99,6 +106,7 @@ else
     private string _sortDir = "asc";
     private string _filterText = "";
     private HashSet<Guid> _selected = new();
+    private bool _canWrite;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -106,6 +114,7 @@ else
         _selected.Clear();
         _entityDef = await EntityService.GetByIdAsync(EntityId);
         _fields = _entityDef?.Fields?.ToList() ?? new();
+        _canWrite = CurrentUser.CanWrite(_entityDef?.Domain);
         await LoadRecords();
     }
 

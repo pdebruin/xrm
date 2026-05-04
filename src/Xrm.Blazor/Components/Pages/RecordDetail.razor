@@ -8,6 +8,7 @@
 @inject IRecordService RecordService
 @inject IRelationshipService RelationshipService
 @inject IAuditService AuditService
+@inject ICurrentUser CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
@@ -48,7 +49,10 @@ else
         @* === READ MODE === *@
         <div class="detail-read">
             <div class="d-flex justify-content-end mb-2">
-                <button class="btn btn-sm btn-outline-primary" @onclick="() => _editing = true">✎ Edit</button>
+                @if (CurrentUser.CanWrite(_entityDef?.Domain))
+                {
+                    <button class="btn btn-sm btn-outline-primary" @onclick="() => _editing = true">✎ Edit</button>
+                }
             </div>
             <table class="table table-sm detail-table">
                 <tbody>
@@ -227,7 +231,10 @@ else
             <div class="child-section mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h5 class="mb-0">@(section.Entity.PluralName ?? section.Entity.DisplayName ?? section.Entity.Name)</h5>
-                    <button class="btn btn-sm btn-primary" @onclick="() => StartAddChild(rel.Id)">+ Add</button>
+                    @if (CurrentUser.CanWrite(section.Entity.Domain))
+                    {
+                        <button class="btn btn-sm btn-primary" @onclick="() => StartAddChild(rel.Id)">+ Add</button>
+                    }
                 </div>
 
                 @if (section.Records.Any())
@@ -252,10 +259,13 @@ else
                                             <td>@GetChildCellValue(rec.DataJson, f.Name)</td>
                                         }
                                         <td class="text-end text-nowrap">
-                                            <button class="btn btn-sm btn-outline-primary me-1" title="Edit"
-                                                    @onclick="() => StartEditChild(rel.Id, rec)">✎</button>
-                                            <button class="btn btn-sm btn-outline-danger" title="Delete"
-                                                    @onclick="() => DeleteChild(rel.Id, rec.Id)">✕</button>
+                                            @if (CurrentUser.CanWrite(section.Entity.Domain))
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary me-1" title="Edit"
+                                                        @onclick="() => StartEditChild(rel.Id, rec)">✎</button>
+                                                <button class="btn btn-sm btn-outline-danger" title="Delete"
+                                                        @onclick="() => DeleteChild(rel.Id, rec.Id)">✕</button>
+                                            }
                                         </td>
                                     </tr>
                                 }
