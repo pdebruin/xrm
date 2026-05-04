@@ -2,13 +2,9 @@
 
 ## Problem Statement
 
-XRM is a generic, extensible relationship management framework. Specific
-implementations (e.g., the ERP for Dutch housing corporations) need to add
-domain-specific schema seeds, branding, and features — but currently this is done
-by **copying the entire `src/Xrm.Server`** folder. This creates diverging
-versions that are painful to maintain and miss upstream bug fixes or features.
-
-We need a layered approach where:
+XRM is a generic, extensible relationship management framework. Domain-specific
+implementations need to add their own schema seeds, branding, and features — but
+this should not be done by copying the framework. We need a layered approach where:
 
 1. XRM remains a reusable framework/platform.
 2. Domain implementations only define their own additions (schema, seed data,
@@ -21,10 +17,7 @@ We need a layered approach where:
 | Repo | Contents |
 |------|----------|
 | `xrm` | Generic framework: EAV models, services, Blazor UI, REST API |
-| `erp` | Full copy of `Xrm.Server` + housing corp seed data in `DemoDataSeeder.cs` |
-
-The only meaningful difference in `erp` today is the domain seed — but because
-the entire project is copied, any fix in `xrm` must be manually re-applied.
+| domain project | Thin host that references Xrm.Core + Xrm.Blazor + domain-specific seed data |
 
 ---
 
@@ -44,10 +37,10 @@ xrm/
     Xrm.Blazor/         ← Razor components, layouts (RCL → NuGet)
     Xrm.Server/         ← Host app (reference project, demo/dev)
 
-erp/
+my-domain/
   src/
-    Erp.Server/          ← ASP.NET host, references Xrm.Core + Xrm.Blazor via NuGet
-      DomainSeeder.cs    ← Housing corp entities/fields/relationships
+    MyDomain.Server/     ← ASP.NET host, references Xrm.Core + Xrm.Blazor via NuGet
+      DomainSeeder.cs    ← Domain-specific entities/fields/relationships
       Program.cs         ← Composes services, adds custom middleware
 ```
 
@@ -78,10 +71,10 @@ Include `xrm` as a Git submodule (or subtree) in the domain repo.
 **Structure:**
 
 ```
-erp/
-  xrm/                  ← git submodule pointing at pdebruin/xrm
+my-domain/
+  xrm/                  ← git submodule pointing at xrm repo
   src/
-    Erp.Server/          ← Host app, project-references xrm/src/Xrm.Server
+    MyDomain.Server/     ← Host app, project-references xrm/src/Xrm.Core
       DomainSeeder.cs
       Program.cs
 ```
@@ -115,9 +108,9 @@ _projects/
     src/Xrm.Core/
     src/Xrm.Blazor/
     src/Xrm.Server/          ← standalone demo host
-  erp/
-    src/Erp.Server/
-      Erp.Server.csproj      ← <ProjectReference Include="../../xrm/src/Xrm.Core/..." />
+  my-domain/
+    src/MyDomain.Server/
+      MyDomain.Server.csproj ← <ProjectReference Include="../../xrm/src/Xrm.Core/..." />
 ```
 
 **Pros:**
@@ -200,7 +193,7 @@ onboarding new domain projects.
    - Publish to GitHub Packages (free for the repo, private if needed).
    - Use `Directory.Build.props` for shared version/metadata.
 
-4. **Create the domain project (`Erp.Server`):**
+4. **Create a domain project:**
    - Small ASP.NET host with `PackageReference` to `Xrm.Core` / `Xrm.Blazor`.
    - Contains only: `Program.cs`, domain seeder, and any domain-specific
      extensions.
@@ -228,9 +221,9 @@ framework code:
 
 | Extension Point | Mechanism | Example |
 |----------------|-----------|---------|
-| Domain schema seed | `IDataSeeder` registered via DI | Housing corp entities |
+| Domain schema seed | `IDataSeeder` registered via DI | CRM entities for sales, HR, etc. |
 | Extra services | Standard DI registration in `Program.cs` | Domain validation |
-| UI branding | `XrmOptions` (app name, theme colors) | "ERP Woningcorporatie" |
+| UI branding | `XrmOptions` (app name, theme colors) | Custom app title, logo |
 | Additional Blazor pages | RCL `_Imports.razor` + routing | Domain dashboards |
 | Middleware | Standard ASP.NET pipeline in `Program.cs` | Custom auth |
 
@@ -277,7 +270,7 @@ xrm/src/
 
 ## How a Domain Project Consumes This
 
-Example: `xrm-for-sales/src/Sales.Server/`
+Example: a sales CRM domain project:
 
 ```xml
 <!-- Sales.Server.csproj -->
@@ -300,7 +293,7 @@ public class SalesDataSeeder : IDataSeeder
 ```
 
 ```razor
-<!-- Routes.razor — picks up pages from both Sales + XRM assemblies -->
+<!-- Routes.razor — picks up pages from both domain + XRM assemblies -->
 <Router AppAssembly="typeof(Program).Assembly"
         AdditionalAssemblies="new[] { typeof(Xrm.Blazor.Components.App).Assembly }">
 ```

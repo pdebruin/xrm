@@ -252,7 +252,7 @@ Entities can define declarative rules that validate relationships between fields
 
 ## Computed Fields
 
-Fields of type `Computed` evaluate an expression on every read. Supports arithmetic (`NettoHuur + Servicekosten`), literals (`Netto * 1.21`), and aggregates (`COUNT(Huurcontract)`, `SUM(Huurcontract.Maandhuur)`). See [computed-fields.md](computed-fields.md) for syntax and examples.
+Fields of type `Computed` evaluate an expression on every read. Supports arithmetic (`UnitPrice + ShippingCost`), literals (`Subtotal * 1.21`), and aggregates (`COUNT(Order)`, `SUM(OrderLine.Amount)`). See [computed-fields.md](computed-fields.md) for syntax and examples.
 
 ## Locale-Aware Formatting
 

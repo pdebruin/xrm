@@ -25,7 +25,7 @@ control on entities while remaining identity-provider agnostic.
 ### 1. Configure authentication (host responsibility)
 
 ```csharp
-// Program.cs in your host app (e.g., ERP)
+// Program.cs in your host app
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
 // Or any OIDC provider — XRM is provider-agnostic

@@ -25,11 +25,11 @@ Makes a field required when another field meets a condition.
 ```json
 {
   "type": "required_if",
-  "field": "VveNummer",
-  "whenField": "VveLidmaatschap",
-  "operator": "neq",
-  "value": "Nee",
-  "message": "VvE-nummer is required when VvE-lidmaatschap is not Nee"
+  "field": "IBAN",
+  "whenField": "PaymentMethod",
+  "operator": "eq",
+  "value": "DirectDebit",
+  "message": "IBAN is required for direct debit payments"
 }
 ```
 
@@ -53,12 +53,12 @@ For `compare` rules, all operators are supported. For `required_if` rules, only 
 ```csharp
 var entity = await entityService.CreateAsync(new EntityDefinition
 {
-    Name = "Huurcontract",
-    DisplayName = "Huurcontract",
+    Name = "Contract",
+    DisplayName = "Contract",
     ValidationRulesJson = """
     [
-      {"type":"compare","field":"EindDatum","operator":"gt","otherField":"IngangsDatum","message":"Einddatum moet na ingangsdatum liggen"},
-      {"type":"compare","field":"HuurprijsNieuw","operator":"gte","otherField":"HuurprijsOud","message":"Nieuwe huurprijs mag niet lager zijn dan huidige"}
+      {"type":"compare","field":"EndDate","operator":"gt","otherField":"StartDate","message":"End date must be after start date"},
+      {"type":"compare","field":"NewPrice","operator":"gte","otherField":"OldPrice","message":"New price must not be lower than current price"}
     ]
     """
 });
@@ -92,10 +92,10 @@ Content-Type: application/json
 
 ### Maintenance workflow: actual ≤ budget
 ```json
-{"type":"compare","field":"ActueleUren","operator":"lte","otherField":"BudgetUren","message":"Actuele uren mogen budget niet overschrijden"}
+{"type":"compare","field":"ActualHours","operator":"lte","otherField":"BudgetHours","message":"Actual hours must not exceed budget"}
 ```
 
 ### Conditional field: only required for specific type
 ```json
-{"type":"required_if","field":"IBAN","whenField":"BetalingsMethode","operator":"eq","value":"Automatisch","message":"IBAN is verplicht bij automatische incasso"}
+{"type":"required_if","field":"IBAN","whenField":"PaymentMethod","operator":"eq","value":"DirectDebit","message":"IBAN is required for direct debit payments"}
 ```

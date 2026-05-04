@@ -11,10 +11,10 @@ Reference other fields in the same record with arithmetic operators.
 ```csharp
 await fieldService.CreateAsync(entityId, new FieldDefinition
 {
-    Name = "TotaalMaandhuur",
-    DisplayName = "Totaal maandhuur",
+    Name = "TotalPrice",
+    DisplayName = "Total Price",
     DataType = FieldDataType.Computed,
-    Expression = "NettoHuur + ServicekostenVoorschot"
+    Expression = "UnitPrice + ShippingCost"
 });
 ```
 
@@ -25,18 +25,18 @@ Count or sum child records via relationships.
 ```csharp
 await fieldService.CreateAsync(entityId, new FieldDefinition
 {
-    Name = "AantalContracten",
-    DisplayName = "Aantal contracten",
+    Name = "OrderCount",
+    DisplayName = "Number of Orders",
     DataType = FieldDataType.Computed,
-    Expression = "COUNT(Huurcontract)"
+    Expression = "COUNT(Order)"
 });
 
 await fieldService.CreateAsync(entityId, new FieldDefinition
 {
-    Name = "TotaalHuur",
-    DisplayName = "Totale huur",
+    Name = "TotalRevenue",
+    DisplayName = "Total Revenue",
     DataType = FieldDataType.Computed,
-    Expression = "SUM(Huurcontract.Maandhuur)"
+    Expression = "SUM(OrderLine.Amount)"
 });
 ```
 
@@ -48,7 +48,7 @@ await fieldService.CreateAsync(entityId, new FieldDefinition
 |----------|---------|
 | `+` | `FieldA + FieldB` |
 | `-` | `Price - Discount` |
-| `*` | `Netto * 1.21` |
+| `*` | `Subtotal * 1.21` |
 | `/` | `Total / Count` |
 | `()` | `(A + B) * C` |
 
@@ -86,30 +86,30 @@ await fieldService.CreateAsync(entityId, new FieldDefinition
 
 ## Examples
 
-### BTW calculation
+### Tax calculation
 ```
-Expression = "Netto * 0.21"
-```
-
-### Gross from net
-```
-Expression = "Netto + BTW"
-```
-(Where `BTW` is itself a computed field — computed fields can reference other computed fields)
-
-### Complex with occupied unit count
-```
-Expression = "COUNT(Eenheid)"
+Expression = "Subtotal * 0.21"
 ```
 
-### Total service charges across tenants
+### Gross from net + tax
 ```
-Expression = "SUM(Huurcontract.Servicekosten)"
+Expression = "Subtotal + Tax"
+```
+(Where `Tax` is itself a computed field — computed fields can reference other computed fields)
+
+### Count related records
+```
+Expression = "COUNT(Contact)"
+```
+
+### Sum a child field
+```
+Expression = "SUM(OrderLine.Amount)"
 ```
 
 ### Combined: arithmetic + aggregate
 ```
-Expression = "SUM(Huurcontract.NettoHuur) + SUM(Huurcontract.Servicekosten)"
+Expression = "SUM(OrderLine.UnitPrice) + SUM(OrderLine.Shipping)"
 ```
 
 ## Via the API
@@ -119,9 +119,9 @@ POST /api/entities/{entityId}/fields
 Content-Type: application/json
 
 {
-  "name": "TotaalMaandhuur",
+  "name": "TotalPrice",
   "dataType": "Computed",
-  "expression": "NettoHuur + ServicekostenVoorschot"
+  "expression": "UnitPrice + ShippingCost"
 }
 ```
 
