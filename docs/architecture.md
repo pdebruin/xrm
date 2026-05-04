@@ -1,23 +1,53 @@
-# XRM — Architecture & Technology
+# XRM — Architecture & Implementation Guide
+
+This document covers the technical design of XRM and serves as the entry point
+for developers building on or contributing to the framework.
 
 ## Technology Stack
 
-| Layer | Technology | License | Purpose |
-|-------|-----------|---------|---------|
-| Runtime | .NET 10 | MIT | Application framework |
-| UI | Blazor Server | MIT | Interactive server-rendered UI |
-| ORM | EF Core 10 | MIT | Database access with LINQ |
-| Database | SQLite | Public domain | Single-file embedded database |
-| API docs | Swashbuckle | Apache 2.0 | Swagger/OpenAPI generation |
-| Tests | xUnit | Apache 2.0 | Unit and integration testing |
-| Test host | WebApplicationFactory | MIT | In-process API testing |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Runtime | .NET 10 | Application framework |
+| UI | Blazor Server (RCL) | Interactive server-rendered UI |
+| ORM | EF Core 10 | Database access with LINQ |
+| Database | SQLite | Single-file embedded database |
+| Auth | Microsoft.Identity.Web (optional) | OIDC authentication |
+| API docs | Swashbuckle | Swagger/OpenAPI generation |
+| Tests | xUnit + WebApplicationFactory | Unit and API integration testing |
+| CI | GitHub Actions | Build and test on push |
+
+## Project Structure
+
+```
+src/
+  Xrm.Core/              → Models, services, controllers, auth — the reusable framework
+  Xrm.Blazor/            → Razor Class Library — UI components, pages, layouts
+  Xrm.Server/            → Thin host app (Program.cs + demo data seeder)
+tests/
+  Xrm.Tests/             → 104 automated tests (unit + API integration)
+docs/                     → All documentation
+```
+
+### Reuse Pattern
+
+XRM is designed as a framework consumed by domain-specific host projects:
+
+```
+[Xrm.Core]  ←  [Xrm.Blazor RCL]  ←  [Your Host Project]
+  services        UI components         Program.cs
+  models          pages                 domain seeders
+  controllers     layouts               auth config
+  auth layer
+```
+
+A consumer calls `AddXrmCore(connectionString)` and references the Blazor RCL.
+See [reuse-approach.md](reuse-approach.md) for the full pattern.
 
 ## Architecture
 
-### Overview
+### Service Layer
 
-XRM uses a **service layer architecture** where Blazor pages and REST controllers
-share the same business logic:
+Blazor pages and REST controllers share the same business logic:
 
 ```
 ┌─────────────┐    ┌──────────────┐
@@ -29,9 +59,9 @@ share the same business logic:
        ▼                  ▼
 ┌─────────────────────────────────┐
 │         Service Layer           │
-│  IEntityService, IFieldService  │
+│  IEntityService  IRecordService │
 │  IRelationshipService           │
-│  IRecordService                 │
+│  IAuditService   ICurrentUser   │
 └──────────────┬──────────────────┘
                │
                │  IDbContextFactory
@@ -45,92 +75,92 @@ share the same business logic:
 ### Key Decisions
 
 **Blazor Server (not WASM)**
-- Simpler deployment: single process, no separate API hosting
-- Services injected directly into pages — no HTTP round-trip to self
+- Single process, no separate API hosting needed
+- Services injected directly into pages — no HTTP round-trip
 - Trade-off: requires persistent SignalR connection (fine for self-hosted/small team)
 
 **IDbContextFactory (not scoped DbContext)**
-- Blazor Server circuits live for the entire user session (minutes to hours)
-- A scoped DbContext would accumulate tracked entities and go stale
-- Factory creates short-lived contexts per service operation, then disposes them
+- Blazor Server circuits live for the entire user session
+- Factory creates short-lived contexts per operation, then disposes them
 
 **JSON field values (not EAV rows)**
-- Record data stored as a JSON string in a single `DataJson` column
-- Simpler to read/write than entity-attribute-value rows
-- Trade-off: sorting by field values requires client-side materialization
-- SQLite JSON functions could be used for server-side queries in the future
+- Record data stored as `DataJson` column
+- Simpler than entity-attribute-value rows
+- Trade-off: sorting requires client-side materialization (SQLite JSON functions could improve this)
 
 **Logical relationships (not foreign keys)**
-- Relationships are metadata rows + a `RecordLinks` join table
-- No database schema changes when users create/modify relationships
-- Enforced at the service layer: link validation checks entity membership
+- Relationships are metadata + a `RecordLinks` join table
+- No schema changes when users create/modify relationships
 
-**Service layer (not controllers-only)**
-- Controllers are thin wrappers for external REST consumers
-- Blazor pages inject services directly — in-process, common pattern, fast (no HTTP overhead)
-- An alternative would be to have Blazor consume the REST API ("dogfooding"), which ensures
-  one code path and catches API issues early. We chose direct injection because Blazor Server
-  runs in the same process, making HTTP calls to itself unnecessary overhead.
-- Single source of truth for validation and business rules
+**AnonymousCurrentUser by default**
+- Dev inner loop works without auth configuration
+- Consumers opt in with `AddXrmAuthorization()` when ready
 
 ### Data Model
 
 ```
 EntityDefinition ──< FieldDefinition
        │
-       │ (source/target)
+       │ (parent/child)
        ▼
 RelationshipDefinition
        │
-       │ (definition)
        ▼
-RecordLink (source_record ──── target_record)
-       │
-       │
+RecordLink (parent_record ──── child_record)
+
 Record ──── DataJson (field values as JSON)
+
+KnownUser ──< DomainAssignment (role + domain)
 ```
 
-- **EntityDefinition** — name, display name, icon, home flag
-- **FieldDefinition** — name, type, required, constraints, sort order
-- **RelationshipDefinition** — source entity → target entity, type, cascade behavior
-- **Record** — entity reference + JSON blob of field values + audit fields
-- **RecordLink** — join table connecting two records via a relationship
+## Feature Documentation
 
-### Validation
+These guides cover individual features in depth — both for framework contributors
+and for consumers building on XRM:
+
+### Core Features
+
+| Document | Feature |
+|----------|---------|
+| [authorization.md](authorization.md) | Identity, RBAC, domain-scoped access control, Entra ID setup |
+| [lifecycle-hooks.md](lifecycle-hooks.md) | Pre/post create/update/delete hooks for domain logic |
+| [computed-fields.md](computed-fields.md) | Formula and aggregate computed fields |
+| [state-machines.md](state-machines.md) | Choice field transition rules |
+| [cross-field-validation.md](cross-field-validation.md) | Multi-field validation rules |
+| [autonumber.md](autonumber.md) | Auto-incrementing number fields with prefix/format |
+| [locale-formatting.md](locale-formatting.md) | Culture-aware display formatting |
+
+### Architecture & Process
+
+| Document | Topic |
+|----------|-------|
+| [reuse-approach.md](reuse-approach.md) | How to consume XRM as a framework |
+| [evolution.md](evolution.md) | Project history — from MVP to production |
+| [backlog.md](backlog.md) | Planned features and improvements |
+
+## Validation
 
 Field metadata is enforced at runtime when creating/updating records:
 - Required fields must have a non-empty value
-- Text fields respect `MaxLength`
+- Text fields respect `MaxLength` and `MinLength`
 - Numeric fields respect `MinValue`/`MaxValue`
 - Choice fields only accept defined options
 - Pattern fields are validated with regex
+- Cross-field rules evaluated after individual field validation
+- State machine transitions enforce allowed paths
 
-Record links are validated against the relationship model:
-- Relationship must exist
-- Source record must belong to the relationship's source entity
-- Target record must belong to the relationship's target entity
-
-### Database Lifecycle
+## Database Lifecycle
 
 - `EnsureCreatedAsync()` creates the DB on first run — no migrations needed
-- Code changes (bug fixes, features) do not affect the existing database
-- EF model changes (new columns, changed relationships) require either:
-  - Deleting `xrm.db` and restarting (loses data), or
-  - Adding EF migrations (`dotnet ef migrations add ...`)
+- EF model changes require deleting `xrm.db` and restarting, or adding migrations
 - Backup: copy the `xrm.db` file
 
-### What's Not Yet Implemented
+## What's Not Yet Implemented
 
 | Feature | Status |
 |---------|--------|
+| CSV import/export | Planned — API exists for JSON |
+| Saved/filtered views | Foundation in place (CR-024) |
 | ManyToMany relationships | Enum defined, hidden in UI |
-| Cascade delete | Enum defined, hidden in UI |
-| Global search (FR-2.10) | Not started |
-| Import/export (FR-4) | Not started |
-| Authentication (OIDC) | Architecture ready, not wired |
-| Mobile-responsive record views | Not started |
-| Consistent error handling (4xx) | Partial |
-| Well-architected review | Planned |
-
-See [requirements.md](../requirements.md) for the full list and
-[tests.md](../tests.md) for test coverage mapping.
+| Global search | Not started |
+| Mobile-responsive views | Not started |

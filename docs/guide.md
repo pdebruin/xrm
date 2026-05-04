@@ -88,9 +88,13 @@ In the runtime UI, relationships appear as:
 
 ### Side Navigation
 
-All entities are listed in the left sidebar under **ENTITIES**. Click one to see its
-record list. The **Entities** and **Relationships** links at the bottom take you to
-the schema designer.
+All entities are listed in the left sidebar, grouped by domain with collapsible
+headings. Click one to see its record list.
+
+Administrators also see a **Settings** group at the bottom with links to:
+- **Entities** — schema designer
+- **Relationships** — relationship designer
+- **Security** — user and role management
 
 ### Master Screen — Record Grid
 
@@ -102,8 +106,11 @@ The record grid shows all records of a given entity in a table. Features:
 - **Sort** — click a column header to sort ascending; click again for descending
 - **Pagination** — navigate pages at the bottom; shows total record count
 - **Multi-select** — check records for bulk operations
-- **Delete** — click ✕ to delete individual records
-- **New** — click **+ New** to create a record
+- **Record navigation** — prev/next buttons on the detail page carry your filter/sort context
+- **Delete** — click ✕ to delete individual records (writers only)
+- **New** — click **+ New** to create a record (writers only)
+
+> **Note:** Users with Reader role see the grid in read-only mode — no New, Edit, or Delete actions.
 
 ### Detail Screen — Create & Edit
 
@@ -208,7 +215,7 @@ Demo data can be modified or deleted like any user-created content.
 | Frontend | Blazor Server (interactive SSR) |
 | Database | SQLite via EF Core |
 | Data model | Fixed meta-schema with JSON field values |
-| Tests | xUnit + WebApplicationFactory (83 tests) |
+| Tests | xUnit + WebApplicationFactory (104 tests) |
 | API docs | Swagger / OpenAPI |
 
 ---
