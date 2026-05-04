@@ -124,6 +124,30 @@ public class ClaimsCurrentUser : ICurrentUser
             user.LastSeenAt = DateTime.UtcNow;
             user.DisplayName = _displayName ?? user.DisplayName;
             if (!string.IsNullOrEmpty(_userKey)) user.SubjectId = _userKey;
+
+            // Bootstrap: elevate to SystemAdmin if in initial admins list but not yet assigned
+            if (_options.InitialSystemAdmins.Any(e =>
+                string.Equals(e, normalizedEmail, StringComparison.OrdinalIgnoreCase)))
+            {
+                var hasAdmin = db.Set<DomainAssignment>().Any(a =>
+                    a.UserEmail == normalizedEmail &&
+                    a.Role == "SystemAdmin" &&
+                    a.IsActive);
+
+                if (!hasAdmin)
+                {
+                    db.Set<DomainAssignment>().Add(new DomainAssignment
+                    {
+                        Id = Guid.NewGuid(),
+                        UserEmail = normalizedEmail,
+                        Role = "SystemAdmin",
+                        Domain = null,
+                        AssignedAt = DateTime.UtcNow,
+                        AssignedBy = "system-bootstrap"
+                    });
+                }
+            }
+
             db.SaveChanges();
         }
 
