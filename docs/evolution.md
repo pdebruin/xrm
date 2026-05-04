@@ -32,7 +32,7 @@ Rapid iteration to make it real:
 
 ### Week 2 (Apr 28 – May 4) — Feature CRs & Production Hardening
 
-Driven by the ERP project consuming the framework:
+Driven by a domain project consuming the framework:
 
 - **CR-001** MultiChoice fields
 - **CR-002** AutoNumber fields
@@ -52,7 +52,7 @@ Plus UX polish:
 - User identity chip, access denied handling, role-based UI visibility
 - Entra ID integration guide for consumers
 
-**Result:** 104 tests, ~8,000 lines of code, 73 commits, production-deployed via ERP project.
+**Result:** 104 tests, ~8,000 lines of code, 73 commits, production-deployed.
 
 ## Architecture evolution
 
@@ -62,7 +62,7 @@ Week 0:  [Single Blazor project, everything in one place]
 Week 1:  [Xrm.Core]  ←  [Xrm.Blazor RCL]  ←  [Xrm.Server host]
             ↓                    ↓
 Week 2:  [Xrm.Core]  ←  [Xrm.Blazor RCL]  ←  [Any host project]
-           services          UI components        (ERP, Sales, etc.)
+           services          UI components        (Your app, etc.)
            models            pages
            API controllers   layouts
            auth layer
@@ -89,4 +89,4 @@ Week 2:  [Xrm.Core]  ←  [Xrm.Blazor RCL]  ←  [Any host project]
 | Code | ~8,000 lines (C# + Razor) |
 | Tests | 104 (unit + API integration) |
 | Docs | 10 guides + architecture + backlog |
-| Consumers | 2 (ERP, XRM standalone) |
+| Consumers | 2 (domain app, XRM standalone) |
