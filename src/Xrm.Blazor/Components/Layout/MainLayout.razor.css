@@ -96,3 +96,14 @@ main {
         right: 0.75rem;
         top: 0.5rem;
     }
+
+.access-denied, .unhandled-error {
+    text-align: center;
+    padding: 3rem 1rem;
+    max-width: 480px;
+    margin: 2rem auto;
+}
+
+.access-denied h3, .unhandled-error h3 {
+    margin-bottom: 1rem;
+}
