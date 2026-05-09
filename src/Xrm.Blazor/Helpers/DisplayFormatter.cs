@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Xrm.Core.Models;
 
 namespace Xrm.Blazor.Helpers;
@@ -22,7 +23,23 @@ public static class DisplayFormatter
                 ? n.ToString("N0", culture) : raw,
             FieldDataType.Decimal => decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var dec)
                 ? dec.ToString("N2", culture) : raw,
+            FieldDataType.MultiChoice => FormatMultiChoice(raw),
             _ => raw
         };
+    }
+
+    private static string FormatMultiChoice(string raw)
+    {
+        if (string.IsNullOrEmpty(raw) || !raw.StartsWith('['))
+            return raw;
+        try
+        {
+            var items = JsonSerializer.Deserialize<string[]>(raw);
+            return items is not null ? string.Join(", ", items) : raw;
+        }
+        catch
+        {
+            return raw;
+        }
     }
 }
