@@ -501,8 +501,11 @@ else
                 await LoadChildSection(rel);
             }
 
-            // Load prev/next for record navigation
-            await LoadRecordNavigation();
+            // Load prev/next only when there's a list context (query params present)
+            if (!string.IsNullOrEmpty(QSort) || !string.IsNullOrEmpty(QFilter) || QPage is not null)
+            {
+                await LoadRecordNavigation();
+            }
         }
     }
 

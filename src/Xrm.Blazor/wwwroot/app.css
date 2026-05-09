@@ -189,25 +189,17 @@ h1:focus {
         gap: 0.5rem;
     }
 
-    /* CR-027: Record detail — stacked fields on mobile */
-    .detail-read .detail-table tr {
-        display: block;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #eee;
-    }
-
-    .detail-read .detail-table th,
-    .detail-read .detail-table td {
-        display: block;
-        width: 100% !important;
+    /* CR-027: Record detail — compact fields on mobile */
+    .detail-read .detail-table th.field-label {
+        width: auto !important;
         white-space: normal !important;
-        padding: 0.1rem 0;
+        padding-right: 0.5rem;
+        font-size: 0.85rem;
     }
 
-    .detail-read .detail-table th {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
+    .detail-read .detail-table td {
+        white-space: normal !important;
+        word-break: break-word;
     }
 
     .detail-form {
