@@ -34,6 +34,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<IDbContextFactory<XrmDbContext>>();
     await using var ctx = await db.CreateDbContextAsync();
     await ctx.Database.EnsureCreatedAsync();
+    await ctx.ApplySchemaUpgradesAsync();
 }
 
 // Configure the HTTP request pipeline.

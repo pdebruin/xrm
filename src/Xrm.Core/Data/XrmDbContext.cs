@@ -66,6 +66,7 @@ public class XrmDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.EntityDefinitionId);
             entity.Property(e => e.DataJson).IsRequired();
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             entity.HasOne(e => e.EntityDefinition)
                 .WithMany(ed => ed.Records)
@@ -167,6 +168,42 @@ public class XrmDbContext : DbContext
                 else if (entry.Entity is RelationshipDefinition rd) { rd.ModifiedAt = now; }
                 else if (entry.Entity is Record r) { r.ModifiedAt = now; }
             }
+        }
+    }
+
+    /// <summary>
+    /// Applies schema upgrades for columns that EnsureCreated won't add to existing tables.
+    /// Safe to call multiple times — checks for column existence first.
+    /// </summary>
+    public async Task ApplySchemaUpgradesAsync()
+    {
+        var conn = Database.GetDbConnection();
+        var wasOpen = conn.State == System.Data.ConnectionState.Open;
+        if (!wasOpen)
+            await conn.OpenAsync();
+        try
+        {
+            // Check if IsActive column exists on Records table
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "PRAGMA table_info('Records')";
+            var columns = new List<string>();
+            using (var reader = await cmd.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                    columns.Add(reader.GetString(1));
+            }
+
+            if (!columns.Contains("IsActive"))
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE Records ADD COLUMN IsActive INTEGER NOT NULL DEFAULT 1";
+                await alter.ExecuteNonQueryAsync();
+            }
+        }
+        finally
+        {
+            if (!wasOpen)
+                await conn.CloseAsync();
         }
     }
 }

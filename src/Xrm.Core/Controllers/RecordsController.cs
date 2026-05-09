@@ -25,9 +25,10 @@ public class RecordsController : ControllerBase
         [FromQuery] int pageSize = 25,
         [FromQuery] string? sortField = null,
         [FromQuery] string sortDir = "asc",
-        [FromQuery] string? filter = null)
+        [FromQuery] string? filter = null,
+        [FromQuery] bool? isActive = true)
     {
-        var result = await _records.GetAllAsync(entityId, page, pageSize, sortField, sortDir, filter);
+        var result = await _records.GetAllAsync(entityId, page, pageSize, sortField, sortDir, filter, isActive: isActive);
         return new RecordPageDto
         {
             Records = result.Records,
@@ -71,6 +72,14 @@ public class RecordsController : ControllerBase
     {
         var deleted = await _records.DeleteAsync(entityId, id);
         if (!deleted) return NotFound();
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/reactivate")]
+    public async Task<IActionResult> Reactivate(Guid entityId, Guid id)
+    {
+        var reactivated = await _records.ReactivateAsync(entityId, id);
+        if (!reactivated) return NotFound();
         return NoContent();
     }
 

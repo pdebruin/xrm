@@ -119,14 +119,33 @@ public class RecordServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task Delete_RemovesRecord()
+    public async Task Delete_DeactivatesRecord()
     {
         var entityId = await CreateEntityWithFieldsAsync();
         var svc = CreateRecordService();
         var result = await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Gone" }));
 
         Assert.True(await svc.DeleteAsync(entityId, result.Record!.Id));
-        Assert.Null(await svc.GetByIdAsync(entityId, result.Record!.Id));
+        // Record still exists but is deactivated
+        var record = await svc.GetByIdAsync(entityId, result.Record!.Id);
+        Assert.NotNull(record);
+        Assert.False(record.IsActive);
+        // Active-only query excludes it
+        var page = await svc.GetAllAsync(entityId, isActive: true);
+        Assert.DoesNotContain(page.Records, r => r.Id == result.Record!.Id);
+    }
+
+    [Fact]
+    public async Task Reactivate_RestoresRecord()
+    {
+        var entityId = await CreateEntityWithFieldsAsync();
+        var svc = CreateRecordService();
+        var result = await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Back" }));
+
+        await svc.DeleteAsync(entityId, result.Record!.Id);
+        Assert.True(await svc.ReactivateAsync(entityId, result.Record!.Id));
+        var record = await svc.GetByIdAsync(entityId, result.Record!.Id);
+        Assert.True(record!.IsActive);
     }
 
     [Fact]

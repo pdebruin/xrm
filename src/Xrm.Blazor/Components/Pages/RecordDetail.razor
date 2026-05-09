@@ -48,8 +48,18 @@ else
     {
         @* === READ MODE === *@
         <div class="detail-read">
+            @if (!_isActive)
+            {
+                <div class="alert alert-secondary py-1 px-2 mb-2 d-flex align-items-center">
+                    <span>This record is deactivated.</span>
+                    @if (CurrentUser.CanWrite(_entityDef?.Domain))
+                    {
+                        <button class="btn btn-sm btn-outline-success ms-auto" @onclick="Reactivate">↺ Reactivate</button>
+                    }
+                </div>
+            }
             <div class="d-flex justify-content-end mb-2">
-                @if (CurrentUser.CanWrite(_entityDef?.Domain))
+                @if (CurrentUser.CanWrite(_entityDef?.Domain) && _isActive)
                 {
                     <button class="btn btn-sm btn-outline-primary" @onclick="() => _editing = true">✎ Edit</button>
                 }
@@ -426,6 +436,7 @@ else
     private bool _saving;
     private bool _editing;
     private bool _showHistory;
+    private bool _isActive = true;
     private string? _error;
     private string? _warning;
     private EntityDefinition? _entityDef;
@@ -501,6 +512,7 @@ else
             if (record is not null)
             {
                 _data = JsonSerializer.Deserialize<Dictionary<string, object?>>(record.DataJson) ?? new();
+                _isActive = record.IsActive;
             }
 
             var links = linksTask.Result;
@@ -712,6 +724,12 @@ else
     private void GoPrev() { if (_prevRecordId is not null) Nav.NavigateTo(BuildNavUrl(_prevRecordId.Value)); }
     private void GoNext() { if (_nextRecordId is not null) Nav.NavigateTo(BuildNavUrl(_nextRecordId.Value)); }
     private void CancelEdit() => _editing = false;
+
+    private async Task Reactivate()
+    {
+        await RecordService.ReactivateAsync(EntityId, RecordId!.Value);
+        _isActive = true;
+    }
 
     private void NavigateToParent(RelationshipDefinition rel)
     {

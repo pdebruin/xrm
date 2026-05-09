@@ -50,7 +50,7 @@ public class AuditServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task Delete_LogsDeletedWithOldData()
+    public async Task Delete_LogsDeactivatedWithOldData()
     {
         var entitySvc = CreateEntityService();
         var entity = await entitySvc.CreateAsync(new EntityDefinition { Name = "AudDelete" });
@@ -66,7 +66,7 @@ public class AuditServiceTests : ServiceTestBase
         var history = await auditSvc.GetHistoryAsync(record.Id);
 
         Assert.Equal(2, history.Count);
-        var deleteEntry = history.First(h => h.Action == "Deleted");
+        var deleteEntry = history.First(h => h.Action == "Deactivated");
         Assert.Contains("ToDelete", deleteEntry.OldDataJson!);
         Assert.Null(deleteEntry.NewDataJson);
     }

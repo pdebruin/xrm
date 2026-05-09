@@ -41,6 +41,11 @@ else
     <div class="master-toolbar">
         <input type="text" class="form-control form-control-sm" placeholder="Filter..." 
                @bind="_filterText" @bind:event="oninput" @bind:after="LoadRecords" />
+        <select class="form-select form-select-sm w-auto ms-2" @onchange="OnStatusChanged">
+            <option value="active" selected="@(_statusFilter == "active")">Active</option>
+            <option value="all" selected="@(_statusFilter == "all")">All</option>
+            <option value="inactive" selected="@(_statusFilter == "inactive")">Deactivated</option>
+        </select>
     </div>
 
     <div class="master-grid">
@@ -78,10 +83,17 @@ else
                             {
                                 <td data-label="@(field.DisplayName ?? field.Name)">@GetDisplayValue(data, field)</td>
                             }
-                            <td>
+                            <td class="text-end text-nowrap">
                                 @if (_canWrite)
                                 {
-                                    <button class="btn btn-link btn-sm text-danger" @onclick:stopPropagation="true" @onclick="() => DeleteRecord(record.Id)">✕</button>
+                                    @if (record.IsActive)
+                                    {
+                                        <button class="btn btn-link btn-sm text-danger" title="Deactivate" @onclick:stopPropagation="true" @onclick="() => DeactivateRecord(record.Id)">✕</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-link btn-sm text-success" title="Reactivate" @onclick:stopPropagation="true" @onclick="() => ReactivateRecord(record.Id)">↺</button>
+                                    }
                                 }
                             </td>
                         </tr>
@@ -96,7 +108,7 @@ else
         @if (_selected.Count > 0 && _canWrite)
         {
             <span class="ms-3">@_selected.Count selected</span>
-            <button class="btn btn-outline-danger btn-sm ms-2" @onclick="DeleteSelected">Delete Selected</button>
+            <button class="btn btn-outline-danger btn-sm ms-2" @onclick="DeactivateSelected">Deactivate Selected</button>
         }
         <div class="ms-auto">
             <button class="btn btn-sm btn-outline-secondary" disabled="@(_page <= 1)" @onclick="PrevPage">← Prev</button>
@@ -122,6 +134,7 @@ else
     private bool _canWrite;
     private List<SavedView> _savedViews = new();
     private string _activeViewName = "";
+    private string _statusFilter = "active";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -138,7 +151,8 @@ else
     private async Task LoadRecords()
     {
         var viewFilters = GetActiveViewFilters();
-        var result = await RecordService.GetAllAsync(EntityId, _page, _pageSize, _sortField, _sortDir, _filterText, viewFilters);
+        bool? isActive = _statusFilter switch { "active" => true, "inactive" => false, _ => null };
+        var result = await RecordService.GetAllAsync(EntityId, _page, _pageSize, _sortField, _sortDir, _filterText, viewFilters, isActive);
         _records = result.Records;
         _total = result.Total;
     }
@@ -225,16 +239,30 @@ else
             _selected.Clear();
     }
 
-    private async Task DeleteRecord(Guid id)
+    private async Task DeactivateRecord(Guid id)
     {
         await RecordService.DeleteAsync(EntityId, id);
         await LoadRecords();
     }
 
-    private async Task DeleteSelected()
+    private async Task ReactivateRecord(Guid id)
+    {
+        await RecordService.ReactivateAsync(EntityId, id);
+        await LoadRecords();
+    }
+
+    private async Task DeactivateSelected()
     {
         foreach (var id in _selected)
             await RecordService.DeleteAsync(EntityId, id);
+        _selected.Clear();
+        await LoadRecords();
+    }
+
+    private async Task OnStatusChanged(ChangeEventArgs e)
+    {
+        _statusFilter = e.Value?.ToString() ?? "active";
+        _page = 1;
         _selected.Clear();
         await LoadRecords();
     }

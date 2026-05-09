@@ -10,6 +10,8 @@ public class Record
     // Field values stored as JSON: { "fieldName": value, ... }
     public string DataJson { get; set; } = "{}";
 
+    public bool IsActive { get; set; } = true;
+
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = "system";
     public DateTime ModifiedAt { get; set; }

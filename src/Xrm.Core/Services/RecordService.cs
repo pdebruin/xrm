@@ -37,11 +37,15 @@ public class RecordService : IRecordService
             throw new UnauthorizedAccessException($"Access denied: cannot write in domain '{domain}'");
     }
 
-    public async Task<RecordPage> GetAllAsync(Guid entityId, int page = 1, int pageSize = 25, string? sortField = null, string sortDir = "asc", string? filter = null, List<ViewFilter>? viewFilters = null)
+    public async Task<RecordPage> GetAllAsync(Guid entityId, int page = 1, int pageSize = 25, string? sortField = null, string sortDir = "asc", string? filter = null, List<ViewFilter>? viewFilters = null, bool? isActive = true)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         await EnsureReadAccess(db, entityId);
         var query = db.Records.Where(r => r.EntityDefinitionId == entityId);
+
+        // Filter by active status: true = active only, false = deactivated only, null = all
+        if (isActive.HasValue)
+            query = query.Where(r => r.IsActive == isActive.Value);
 
         var computedFields = await db.FieldDefinitions
             .Where(f => f.EntityDefinitionId == entityId && f.DataType == FieldDataType.Computed)
@@ -660,23 +664,40 @@ public class RecordService : IRecordService
         foreach (var handler in _lifecycleHandlers)
             await handler.OnDeletingAsync(record, entity);
 
-        // Remove associated links
-        var links = await db.RecordLinks
-            .Where(l => l.ParentRecordId == id || l.ChildRecordId == id)
-            .ToListAsync();
-        db.RecordLinks.RemoveRange(links);
+        db.AuditEntries.Add(new AuditEntry
+        {
+            Id = Guid.NewGuid(),
+            EntityDefinitionId = entityId,
+            RecordId = id,
+            Action = "Deactivated",
+            Timestamp = DateTime.UtcNow,
+            OldDataJson = record.DataJson
+        });
+
+        record.IsActive = false;
+        await db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> ReactivateAsync(Guid entityId, Guid id)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        await EnsureWriteAccess(db, entityId);
+        var record = await db.Records
+            .FirstOrDefaultAsync(r => r.Id == id && r.EntityDefinitionId == entityId && !r.IsActive);
+        if (record is null) return false;
 
         db.AuditEntries.Add(new AuditEntry
         {
             Id = Guid.NewGuid(),
             EntityDefinitionId = entityId,
             RecordId = id,
-            Action = "Deleted",
+            Action = "Reactivated",
             Timestamp = DateTime.UtcNow,
-            OldDataJson = record.DataJson
+            NewDataJson = record.DataJson
         });
 
-        db.Records.Remove(record);
+        record.IsActive = true;
         await db.SaveChangesAsync();
         return true;
     }
