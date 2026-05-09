@@ -253,12 +253,12 @@ else
                             <tbody>
                                 @foreach (var rec in section.Records)
                                 {
-                                    <tr>
+                                    <tr style="cursor:pointer" @onclick="() => OpenChildDetail(rel.ChildEntityId, rec.Id)">
                                         @foreach (var f in section.Fields)
                                         {
                                             <td>@GetChildCellValue(rec.DataJson, f.Name)</td>
                                         }
-                                        <td class="text-end text-nowrap">
+                                        <td class="text-end text-nowrap" @onclick:stopPropagation="true">
                                             @if (CurrentUser.CanWrite(section.Entity.Domain))
                                             {
                                                 <button class="btn btn-sm btn-outline-primary me-1" title="Edit"
@@ -706,6 +706,11 @@ else
         {
             Nav.NavigateTo($"records/{rel.ParentEntityId}/{pid}");
         }
+    }
+
+    private void OpenChildDetail(Guid childEntityId, Guid childRecordId)
+    {
+        Nav.NavigateTo($"records/{childEntityId}/{childRecordId}");
     }
 
     private string GetChildCellValue(string dataJson, string fieldName)

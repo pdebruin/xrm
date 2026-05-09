@@ -178,42 +178,10 @@ h1:focus {
 
 /* === Mobile responsive (CR-026, CR-027) === */
 @media (max-width: 640.98px) {
-    /* CR-026: Record list — card layout on mobile */
+    /* CR-026: Horizontal scroll for wide tables */
     .master-grid {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-    }
-
-    .master-grid table thead {
-        display: none;
-    }
-
-    .master-grid table tbody tr {
-        display: block;
-        background: white;
-        border-radius: 8px;
-        padding: 0.75rem;
-        margin-bottom: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    .master-grid table tbody td {
-        display: block;
-        padding: 0.25rem 0;
-    }
-
-    .master-grid table tbody td.col-check {
-        display: none;
-    }
-
-    .master-grid table tbody td::before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: #666;
-        display: block;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
     }
 
     .master-footer {
