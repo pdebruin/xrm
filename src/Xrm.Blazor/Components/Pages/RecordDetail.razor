@@ -431,6 +431,7 @@ else
     [SupplyParameterFromQuery(Name = "dir")] public string? QDir { get; set; }
     [SupplyParameterFromQuery(Name = "filter")] public string? QFilter { get; set; }
     [SupplyParameterFromQuery(Name = "page")] public int? QPage { get; set; }
+    [SupplyParameterFromQuery(Name = "status")] public string? QStatus { get; set; }
 
     private bool _isNew => RecordId is null;
     private bool _saving;
@@ -502,7 +503,7 @@ else
             // Load record, links, and prev/next in parallel
             var recordTask = RecordService.GetByIdAsync(EntityId, RecordId!.Value);
             var linksTask = RecordService.GetLinksAsync(EntityId, RecordId!.Value);
-            var navTask = (!string.IsNullOrEmpty(QSort) || !string.IsNullOrEmpty(QFilter) || QPage is not null)
+            var navTask = (!string.IsNullOrEmpty(QSort) || !string.IsNullOrEmpty(QFilter) || QPage is not null || !string.IsNullOrEmpty(QStatus))
                 ? LoadRecordNavigation()
                 : Task.CompletedTask;
 
@@ -537,11 +538,14 @@ else
         _nextRecordId = null;
         if (RecordId is null) return;
 
+        bool? isActive = QStatus switch { "inactive" => false, "all" => null, _ => true };
+
         // Load all record IDs with same sort/filter context
         var result = await RecordService.GetAllAsync(EntityId, QPage ?? 1, 1000,
             string.IsNullOrEmpty(QSort) ? null : QSort,
             string.IsNullOrEmpty(QDir) ? "asc" : QDir,
-            string.IsNullOrEmpty(QFilter) ? null : QFilter);
+            string.IsNullOrEmpty(QFilter) ? null : QFilter,
+            isActive: isActive);
 
         var ids = result.Records.Select(r => r.Id).ToList();
         var idx = ids.IndexOf(RecordId.Value);
@@ -551,7 +555,7 @@ else
 
     private string BuildNavUrl(Guid recordId)
     {
-        var qs = $"?sort={Uri.EscapeDataString(QSort ?? "")}&dir={QDir ?? "asc"}&filter={Uri.EscapeDataString(QFilter ?? "")}&page={QPage ?? 1}";
+        var qs = $"?sort={Uri.EscapeDataString(QSort ?? "")}&dir={QDir ?? "asc"}&filter={Uri.EscapeDataString(QFilter ?? "")}&page={QPage ?? 1}&status={QStatus ?? "active"}";
         return $"records/{EntityId}/{recordId}{qs}";
     }
 

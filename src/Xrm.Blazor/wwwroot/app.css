@@ -94,7 +94,9 @@ h1:focus {
 
 .master-toolbar {
     margin-bottom: 0.75rem;
-    max-width: 300px;
+    display: flex;
+    gap: 0.5rem;
+    max-width: 500px;
 }
 
 .master-grid table {

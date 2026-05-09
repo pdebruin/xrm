@@ -41,7 +41,7 @@ else
     <div class="master-toolbar">
         <input type="text" class="form-control form-control-sm" placeholder="Filter..." 
                @bind="_filterText" @bind:event="oninput" @bind:after="LoadRecords" />
-        <select class="form-select form-select-sm w-auto ms-2" @onchange="OnStatusChanged">
+        <select class="form-select form-select-sm w-auto" @onchange="OnStatusChanged">
             <option value="active" selected="@(_statusFilter == "active")">Active</option>
             <option value="all" selected="@(_statusFilter == "all")">All</option>
             <option value="inactive" selected="@(_statusFilter == "inactive")">Deactivated</option>
@@ -219,7 +219,7 @@ else
 
     private void OpenDetail(Guid id)
     {
-        var qs = $"?sort={Uri.EscapeDataString(_sortField ?? "")}&dir={_sortDir}&filter={Uri.EscapeDataString(_filterText ?? "")}&page={_page}";
+        var qs = $"?sort={Uri.EscapeDataString(_sortField ?? "")}&dir={_sortDir}&filter={Uri.EscapeDataString(_filterText ?? "")}&page={_page}&status={_statusFilter}";
         if (!string.IsNullOrEmpty(_activeViewName))
             qs += $"&view={Uri.EscapeDataString(_activeViewName)}";
         Nav.NavigateTo($"records/{EntityId}/{id}{qs}");
