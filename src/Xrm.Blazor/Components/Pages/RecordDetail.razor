@@ -462,31 +462,48 @@ else
         _parentRelationships = asChild.Where(r => r.RelationshipType == RelationshipType.OneToMany).ToList();
         _childRelationships = asParent.Where(r => r.RelationshipType == RelationshipType.OneToMany).ToList();
 
-        // Load parent options
-        foreach (var rel in _parentRelationships)
+        // Load parent options in parallel
+        var parentOptionTasks = _parentRelationships.Select(async rel =>
         {
             var parentEntity = await EntityService.GetByIdAsync(rel.ParentEntityId);
             var displayField = GetPrimaryFieldName(parentEntity);
             var parentRecords = await RecordService.GetAllAsync(rel.ParentEntityId, 1, 100);
 
-            _parentOptions[rel.Id] = parentRecords.Records.Select(r =>
+            var options = parentRecords.Records.Select(r =>
             {
                 var d = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(r.DataJson) ?? new();
                 var label = d.TryGetValue(displayField, out var v) ? v.ToString() : r.Id.ToString();
                 return new ParentOption { Id = r.Id, Label = label };
             }).ToList();
+
+            return (rel.Id, options);
+        }).ToList();
+
+        await Task.WhenAll(parentOptionTasks);
+        foreach (var t in parentOptionTasks)
+        {
+            var (relId, options) = t.Result;
+            _parentOptions[relId] = options;
         }
 
         if (!_isNew)
         {
-            var record = await RecordService.GetByIdAsync(EntityId, RecordId!.Value);
+            // Load record, links, and prev/next in parallel
+            var recordTask = RecordService.GetByIdAsync(EntityId, RecordId!.Value);
+            var linksTask = RecordService.GetLinksAsync(EntityId, RecordId!.Value);
+            var navTask = (!string.IsNullOrEmpty(QSort) || !string.IsNullOrEmpty(QFilter) || QPage is not null)
+                ? LoadRecordNavigation()
+                : Task.CompletedTask;
+
+            await Task.WhenAll(recordTask, linksTask, navTask);
+
+            var record = recordTask.Result;
             if (record is not null)
             {
                 _data = JsonSerializer.Deserialize<Dictionary<string, object?>>(record.DataJson) ?? new();
             }
 
-            // Load links
-            var links = await RecordService.GetLinksAsync(EntityId, RecordId!.Value);
+            var links = linksTask.Result;
 
             foreach (var rel in _parentRelationships)
             {
@@ -496,16 +513,9 @@ else
                 _parentLinkIds[rel.Id] = link?.Id;
             }
 
-            foreach (var rel in _childRelationships)
-            {
-                await LoadChildSection(rel);
-            }
-
-            // Load prev/next only when there's a list context (query params present)
-            if (!string.IsNullOrEmpty(QSort) || !string.IsNullOrEmpty(QFilter) || QPage is not null)
-            {
-                await LoadRecordNavigation();
-            }
+            // Load child sections in parallel, reusing already-loaded links
+            var childTasks = _childRelationships.Select(rel => LoadChildSection(rel, links)).ToList();
+            await Task.WhenAll(childTasks);
         }
     }
 
@@ -728,24 +738,28 @@ else
         return "";
     }
 
-    private async Task LoadChildSection(RelationshipDefinition rel)
+    private async Task LoadChildSection(RelationshipDefinition rel, IReadOnlyList<RecordLinkInfo> links)
     {
         var entity = await EntityService.GetByIdAsync(rel.ChildEntityId);
         var fields = entity?.Fields?.OrderBy(f => f.SortOrder).ToList() ?? new();
-        var links = await RecordService.GetLinksAsync(EntityId, RecordId!.Value);
         var childLinks = links.Where(l => l.RelationshipId == rel.Id && l.Direction == "outgoing").ToList();
-        var records = new List<Record>();
-        foreach (var cl in childLinks)
-        {
-            var rec = await RecordService.GetByIdAsync(rel.ChildEntityId, cl.ChildRecordId);
-            if (rec is not null) records.Add(rec);
-        }
+
+        var recordTasks = childLinks.Select(cl => RecordService.GetByIdAsync(rel.ChildEntityId, cl.ChildRecordId));
+        var results = await Task.WhenAll(recordTasks);
+        var records = results.Where(r => r is not null).Cast<Record>().ToList();
+
         _childSections[rel.Id] = new ChildSection
         {
             Entity = entity!,
             Fields = fields,
             Records = records
         };
+    }
+
+    private async Task LoadChildSection(RelationshipDefinition rel)
+    {
+        var links = await RecordService.GetLinksAsync(EntityId, RecordId!.Value);
+        await LoadChildSection(rel, links);
     }
 
     private void StartAddChild(Guid relId)
