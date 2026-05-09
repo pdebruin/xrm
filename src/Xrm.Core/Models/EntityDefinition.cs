@@ -43,6 +43,13 @@ public class EntityDefinition
     /// </summary>
     public string? ValidationRulesJson { get; set; }
 
+    /// <summary>
+    /// JSON array of saved view definitions for the record list.
+    /// Each view has a name and filter conditions.
+    /// Example: [{"Name":"My Records","Filters":[{"Field":"Owner","Operator":"eq","Value":"{{currentUser}}"}]}]
+    /// </summary>
+    public string? SavedViewsJson { get; set; }
+
     [JsonIgnore]
     public ICollection<RelationshipDefinition> ParentRelationships { get; set; } = new List<RelationshipDefinition>();
     [JsonIgnore]

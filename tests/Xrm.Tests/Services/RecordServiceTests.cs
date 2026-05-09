@@ -869,4 +869,103 @@ public class RecordServiceTests : ServiceTestBase
             return Task.CompletedTask;
         }
     }
+
+    [Fact]
+    public async Task GetAll_ViewFilter_Eq()
+    {
+        var entityId = await CreateEntityWithFieldsAsync();
+        var svc = CreateRecordService();
+
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Alice", LastName = "Smith" }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Bob", LastName = "Jones" }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Charlie", LastName = "Smith" }));
+
+        var filters = new List<ViewFilter> { new() { Field = "LastName", Operator = "eq", Value = "Smith" } };
+        var page = await svc.GetAllAsync(entityId, viewFilters: filters);
+
+        Assert.Equal(2, page.Records.Count);
+        Assert.Equal(2, page.Total);
+    }
+
+    [Fact]
+    public async Task GetAll_ViewFilter_Neq()
+    {
+        var entityId = await CreateEntityWithFieldsAsync();
+        var svc = CreateRecordService();
+
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Alice", LastName = "Smith" }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Bob", LastName = "Jones" }));
+
+        var filters = new List<ViewFilter> { new() { Field = "LastName", Operator = "neq", Value = "Smith" } };
+        var page = await svc.GetAllAsync(entityId, viewFilters: filters);
+
+        Assert.Single(page.Records);
+    }
+
+    [Fact]
+    public async Task GetAll_ViewFilter_Contains()
+    {
+        var entityId = await CreateEntityWithFieldsAsync();
+        var svc = CreateRecordService();
+
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Alice", LastName = "Smithson" }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Bob", LastName = "Jones" }));
+
+        var filters = new List<ViewFilter> { new() { Field = "LastName", Operator = "contains", Value = "smith" } };
+        var page = await svc.GetAllAsync(entityId, viewFilters: filters);
+
+        Assert.Single(page.Records);
+    }
+
+    [Fact]
+    public async Task GetAll_ViewFilter_NumericComparison()
+    {
+        var entityId = await CreateEntityWithFieldsAsync();
+        var svc = CreateRecordService();
+
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Alice", Age = 25 }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Bob", Age = 35 }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Charlie", Age = 30 }));
+
+        var filters = new List<ViewFilter> { new() { Field = "Age", Operator = "gte", Value = "30" } };
+        var page = await svc.GetAllAsync(entityId, viewFilters: filters);
+
+        Assert.Equal(2, page.Records.Count);
+    }
+
+    [Fact]
+    public async Task GetAll_ViewFilter_MultipleFilters_And()
+    {
+        var entityId = await CreateEntityWithFieldsAsync();
+        var svc = CreateRecordService();
+
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Alice", LastName = "Smith", Age = 25 }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Bob", LastName = "Smith", Age = 35 }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Charlie", LastName = "Jones", Age = 35 }));
+
+        var filters = new List<ViewFilter>
+        {
+            new() { Field = "LastName", Operator = "eq", Value = "Smith" },
+            new() { Field = "Age", Operator = "gt", Value = "30" }
+        };
+        var page = await svc.GetAllAsync(entityId, viewFilters: filters);
+
+        Assert.Single(page.Records);
+    }
+
+    [Fact]
+    public async Task GetAll_ViewFilter_CombinedWithTextFilter()
+    {
+        var entityId = await CreateEntityWithFieldsAsync();
+        var svc = CreateRecordService();
+
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Alice", LastName = "Smith" }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Bob", LastName = "Smith" }));
+        await svc.CreateAsync(entityId, JsonSerializer.Serialize(new { FirstName = "Charlie", LastName = "Jones" }));
+
+        var filters = new List<ViewFilter> { new() { Field = "LastName", Operator = "eq", Value = "Smith" } };
+        var page = await svc.GetAllAsync(entityId, filter: "Alice", viewFilters: filters);
+
+        Assert.Single(page.Records);
+    }
 }

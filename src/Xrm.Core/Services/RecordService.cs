@@ -37,7 +37,7 @@ public class RecordService : IRecordService
             throw new UnauthorizedAccessException($"Access denied: cannot write in domain '{domain}'");
     }
 
-    public async Task<RecordPage> GetAllAsync(Guid entityId, int page = 1, int pageSize = 25, string? sortField = null, string sortDir = "asc", string? filter = null)
+    public async Task<RecordPage> GetAllAsync(Guid entityId, int page = 1, int pageSize = 25, string? sortField = null, string sortDir = "asc", string? filter = null, List<ViewFilter>? viewFilters = null)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         await EnsureReadAccess(db, entityId);
@@ -47,17 +47,27 @@ public class RecordService : IRecordService
             .Where(f => f.EntityDefinitionId == entityId && f.DataType == FieldDataType.Computed)
             .ToListAsync();
 
-        // When filtering, we must materialize and filter client-side on JSON values only (case-insensitive)
-        if (!string.IsNullOrWhiteSpace(filter))
+        var hasViewFilters = viewFilters is { Count: > 0 };
+        var hasTextFilter = !string.IsNullOrWhiteSpace(filter);
+
+        // View filters and/or text filter require client-side evaluation on JSON
+        if (hasViewFilters || hasTextFilter)
         {
             var all = await query.ToListAsync();
             if (computedFields.Count > 0)
                 foreach (var r in all) r.DataJson = await ApplyComputedFieldsAsync(r.DataJson, computedFields, db, r.Id);
-            var filtered = all.Where(r => MatchesFilter(r.DataJson, filter)).ToList();
-            var total = filtered.Count;
+
+            IEnumerable<Record> filtered = all;
+            if (hasViewFilters)
+                filtered = filtered.Where(r => MatchesViewFilters(r.DataJson, viewFilters!));
+            if (hasTextFilter)
+                filtered = filtered.Where(r => MatchesFilter(r.DataJson, filter!));
+
+            var filteredList = filtered.ToList();
+            var total = filteredList.Count;
             var sorted = string.IsNullOrEmpty(sortField)
-                ? (sortDir == "desc" ? filtered.OrderByDescending(r => r.CreatedAt) : filtered.OrderBy(r => r.CreatedAt)).ToList()
-                : SortByJsonField(filtered, sortField, sortDir);
+                ? (sortDir == "desc" ? filteredList.OrderByDescending(r => r.CreatedAt) : filteredList.OrderBy(r => r.CreatedAt)).ToList()
+                : SortByJsonField(filteredList, sortField, sortDir);
             var paged = sorted.Skip((page - 1) * pageSize).Take(pageSize).ToList();
             return new RecordPage(paged, total, page, pageSize);
         }
@@ -235,6 +245,61 @@ public class RecordService : IRecordService
         }
         catch { }
         return false;
+    }
+
+    /// <summary>
+    /// Checks if a record's JSON data matches all view filter conditions (AND logic).
+    /// </summary>
+    private static bool MatchesViewFilters(string dataJson, List<ViewFilter> filters)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(dataJson);
+            foreach (var f in filters)
+            {
+                var fieldValue = "";
+                if (doc.RootElement.TryGetProperty(f.Field, out var val))
+                {
+                    fieldValue = val.ValueKind switch
+                    {
+                        System.Text.Json.JsonValueKind.String => val.GetString() ?? "",
+                        System.Text.Json.JsonValueKind.Number => val.GetRawText(),
+                        System.Text.Json.JsonValueKind.True => "true",
+                        System.Text.Json.JsonValueKind.False => "false",
+                        _ => ""
+                    };
+                }
+
+                if (!EvaluateFilter(fieldValue, f.Operator, f.Value))
+                    return false;
+            }
+            return true;
+        }
+        catch { }
+        return false;
+    }
+
+    private static bool EvaluateFilter(string fieldValue, string op, string filterValue)
+    {
+        return op switch
+        {
+            "eq" => string.Equals(fieldValue, filterValue, StringComparison.OrdinalIgnoreCase),
+            "neq" => !string.Equals(fieldValue, filterValue, StringComparison.OrdinalIgnoreCase),
+            "contains" => fieldValue.Contains(filterValue, StringComparison.OrdinalIgnoreCase),
+            "gt" => CompareNumeric(fieldValue, filterValue) > 0,
+            "lt" => CompareNumeric(fieldValue, filterValue) < 0,
+            "gte" => CompareNumeric(fieldValue, filterValue) >= 0,
+            "lte" => CompareNumeric(fieldValue, filterValue) <= 0,
+            _ => false
+        };
+    }
+
+    private static int CompareNumeric(string a, string b)
+    {
+        if (double.TryParse(a, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var na)
+            && double.TryParse(b, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var nb))
+            return na.CompareTo(nb);
+        return string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
     }
 
     private static IComparable ExtractSortKey(string dataJson, string fieldName)

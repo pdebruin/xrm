@@ -25,6 +25,19 @@ else
         }
     </div>
 
+    @if (_savedViews.Count > 0)
+    {
+        <div class="master-views mb-2">
+            <select class="form-select form-select-sm d-inline-block w-auto" @onchange="OnViewChanged">
+                <option value="">All</option>
+                @foreach (var view in _savedViews)
+                {
+                    <option value="@view.Name" selected="@(_activeViewName == view.Name)">@view.Name</option>
+                }
+            </select>
+        </div>
+    }
+
     <div class="master-toolbar">
         <input type="text" class="form-control form-control-sm" placeholder="Filter..." 
                @bind="_filterText" @bind:event="oninput" @bind:after="LoadRecords" />
@@ -107,22 +120,75 @@ else
     private string _filterText = "";
     private HashSet<Guid> _selected = new();
     private bool _canWrite;
+    private List<SavedView> _savedViews = new();
+    private string _activeViewName = "";
 
     protected override async Task OnParametersSetAsync()
     {
         _page = 1;
         _selected.Clear();
+        _activeViewName = "";
         _entityDef = await EntityService.GetByIdAsync(EntityId);
         _fields = _entityDef?.Fields?.ToList() ?? new();
         _canWrite = CurrentUser.CanWrite(_entityDef?.Domain);
+        _savedViews = ParseSavedViews(_entityDef?.SavedViewsJson);
         await LoadRecords();
     }
 
     private async Task LoadRecords()
     {
-        var result = await RecordService.GetAllAsync(EntityId, _page, _pageSize, _sortField, _sortDir, _filterText);
+        var viewFilters = GetActiveViewFilters();
+        var result = await RecordService.GetAllAsync(EntityId, _page, _pageSize, _sortField, _sortDir, _filterText, viewFilters);
         _records = result.Records;
         _total = result.Total;
+    }
+
+    private List<ViewFilter>? GetActiveViewFilters()
+    {
+        if (string.IsNullOrEmpty(_activeViewName)) return null;
+        var view = _savedViews.FirstOrDefault(v => v.Name == _activeViewName);
+        if (view is null) return null;
+
+        // Resolve tokens in filter values
+        return view.Filters.Select(f => new ViewFilter
+        {
+            Field = f.Field,
+            Operator = f.Operator,
+            Value = ResolveTokens(f.Value)
+        }).ToList();
+    }
+
+    private string ResolveTokens(string value)
+    {
+        if (value.Contains("{{currentUser}}", StringComparison.OrdinalIgnoreCase))
+            return value.Replace("{{currentUser}}", CurrentUser.Email ?? "", StringComparison.OrdinalIgnoreCase);
+        return value;
+    }
+
+    private static List<SavedView> ParseSavedViews(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new();
+        try
+        {
+            return JsonSerializer.Deserialize<List<SavedView>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+        }
+        catch { return new(); }
+    }
+
+    private async Task OnViewChanged(ChangeEventArgs e)
+    {
+        _activeViewName = e.Value?.ToString() ?? "";
+        _page = 1;
+
+        // Apply view's default sort if present
+        var view = _savedViews.FirstOrDefault(v => v.Name == _activeViewName);
+        if (view?.SortField is not null)
+        {
+            _sortField = view.SortField;
+            _sortDir = view.SortDir ?? "asc";
+        }
+
+        await LoadRecords();
     }
 
     private async Task SortBy(string field)
@@ -140,6 +206,8 @@ else
     private void OpenDetail(Guid id)
     {
         var qs = $"?sort={Uri.EscapeDataString(_sortField ?? "")}&dir={_sortDir}&filter={Uri.EscapeDataString(_filterText ?? "")}&page={_page}";
+        if (!string.IsNullOrEmpty(_activeViewName))
+            qs += $"&view={Uri.EscapeDataString(_activeViewName)}";
         Nav.NavigateTo($"records/{EntityId}/{id}{qs}");
     }
     private void CreateNew() => Nav.NavigateTo($"records/{EntityId}/new");
