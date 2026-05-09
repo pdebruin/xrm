@@ -2,6 +2,8 @@
 @using Xrm.Core.Services
 @inject IEntityService EntityService
 @inject ICurrentUser CurrentUser
+@inject NavigationManager Nav
+@implements IDisposable
 @rendermode InteractiveServer
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -10,9 +12,9 @@
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<button title="Navigation menu" class="navbar-toggler @(_menuOpen ? "open" : "")" @onclick="ToggleMenu"></button>
 
-<div class="nav-scrollable">
+<div class="nav-scrollable @(_menuOpen ? "mobile-open" : "")">
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -98,9 +100,11 @@
 @code {
     private List<EntityDefinition>? _entities;
     private HashSet<string> _collapsedGroups = new();
+    private bool _menuOpen;
 
     protected override async Task OnInitializedAsync()
     {
+        Nav.LocationChanged += OnLocationChanged;
         try
         {
             var all = await EntityService.GetAllAsync();
@@ -112,10 +116,23 @@
         }
     }
 
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _menuOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleMenu() => _menuOpen = !_menuOpen;
+
     private void ToggleGroup(string groupKey)
     {
         if (!_collapsedGroups.Remove(groupKey))
             _collapsedGroups.Add(groupKey);
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
     }
 }
 

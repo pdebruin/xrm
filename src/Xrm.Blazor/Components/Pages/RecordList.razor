@@ -63,7 +63,7 @@ else
                             </td>
                             @foreach (var field in _fields)
                             {
-                                <td>@GetDisplayValue(data, field)</td>
+                                <td data-label="@(field.DisplayName ?? field.Name)">@GetDisplayValue(data, field)</td>
                             }
                             <td>
                                 @if (_canWrite)

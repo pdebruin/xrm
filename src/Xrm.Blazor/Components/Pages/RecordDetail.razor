@@ -59,14 +59,14 @@ else
                     @foreach (var field in _fields)
                     {
                         <tr>
-                            <th class="text-muted" style="width:200px;white-space:nowrap;">@(field.DisplayName ?? field.Name)</th>
+                            <th class="text-muted field-label">@(field.DisplayName ?? field.Name)</th>
                             <td>@GetDisplayValue(field)</td>
                         </tr>
                     }
                     @foreach (var rel in _parentRelationships)
                     {
                         <tr>
-                            <th class="text-muted" style="width:200px;white-space:nowrap;">@(rel.DisplayName ?? rel.Name)</th>
+                            <th class="text-muted field-label">@(rel.DisplayName ?? rel.Name)</th>
                             <td>
                                 @if (Guid.TryParse(GetParentValue(rel.Id), out var pid))
                                 {

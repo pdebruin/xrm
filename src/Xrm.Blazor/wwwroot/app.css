@@ -169,3 +169,80 @@ h1:focus {
     color: var(--xrm-primary);
     font-size: 0.95rem;
 }
+
+/* Record detail field labels (CR-027) */
+.field-label {
+    width: 200px;
+    white-space: nowrap;
+}
+
+/* === Mobile responsive (CR-026, CR-027) === */
+@media (max-width: 640.98px) {
+    /* CR-026: Record list — card layout on mobile */
+    .master-grid {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .master-grid table thead {
+        display: none;
+    }
+
+    .master-grid table tbody tr {
+        display: block;
+        background: white;
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .master-grid table tbody td {
+        display: block;
+        padding: 0.25rem 0;
+    }
+
+    .master-grid table tbody td.col-check {
+        display: none;
+    }
+
+    .master-grid table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #666;
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .master-footer {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* CR-027: Record detail — stacked fields on mobile */
+    .detail-read .detail-table tr {
+        display: block;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .detail-read .detail-table th,
+    .detail-read .detail-table td {
+        display: block;
+        width: 100% !important;
+        white-space: normal !important;
+        padding: 0.1rem 0;
+    }
+
+    .detail-read .detail-table th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .detail-form {
+        max-width: 100%;
+    }
+}
