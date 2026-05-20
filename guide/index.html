@@ -1,0 +1,2276 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Extensible Relationship Management — define entities, fields, and relationships at runtime">
+      
+      
+      
+      
+        <link rel="prev" href="../patterns/locale-formatting/">
+      
+      
+        <link rel="next" href="../backlog/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>User Guide - XRM Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#xrm-user-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="XRM Documentation" class="md-header__button md-logo" aria-label="XRM Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            XRM Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              User Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pdebruin/xrm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pdebruin/xrm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="XRM Documentation" class="md-nav__button md-logo" aria-label="XRM Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    XRM Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pdebruin/xrm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pdebruin/xrm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/reuse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reuse & Packaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/evolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Evolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/entities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/fields/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/records/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Records
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/relationships/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Relationships
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Patterns
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/authorization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authorization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/state-machines/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Machines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/cross-field-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Field Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/computed-fields/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Computed Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/saved-views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saved Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/autonumber/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AutoNumber
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/lifecycle-hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle Hooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/soft-delete/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Soft Delete
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patterns/locale-formatting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Locale Formatting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-1-schema-designer-design-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 1: Schema Designer (Design Time)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 1: Schema Designer (Design Time)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationships
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-2-record-management-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 2: Record Management (Runtime)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 2: Record Management (Runtime)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#side-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Side Navigation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#master-screen-record-grid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Master Screen — Record Grid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#detail-screen-create-edit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detail Screen — Create &amp; Edit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parent-relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parent Relationships
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#child-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Child Records
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#editing-an-activity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing an Activity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rest-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        REST API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demo-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demo Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tech-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tech Stack
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#domain-grouping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domain Grouping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-trail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Trail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lifecycle-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#state-machine-transitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State Machine Transitions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-field-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Field Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#computed-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Computed Fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#locale-aware-formatting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Locale-Aware Formatting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-trail-rest-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Trail REST API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authorization
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backlog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backlog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-1-schema-designer-design-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 1: Schema Designer (Design Time)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 1: Schema Designer (Design Time)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationships
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-2-record-management-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 2: Record Management (Runtime)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 2: Record Management (Runtime)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#side-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Side Navigation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#master-screen-record-grid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Master Screen — Record Grid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#detail-screen-create-edit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detail Screen — Create &amp; Edit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parent-relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parent Relationships
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#child-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Child Records
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#editing-an-activity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing an Activity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rest-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        REST API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demo-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demo Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tech-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tech Stack
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#domain-grouping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domain Grouping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-trail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Trail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lifecycle-hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#state-machine-transitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State Machine Transitions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-field-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Field Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#computed-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Computed Fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#locale-aware-formatting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Locale-Aware Formatting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-trail-rest-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audit Trail REST API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authorization
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="xrm-user-guide">XRM — User Guide<a class="headerlink" href="#xrm-user-guide" title="Permanent link">&para;</a></h1>
+<p>XRM is an extensible relationship management platform. Instead of a fixed CRM schema,
+you define your own entities, fields, and relationships — then manage records through
+a generated UI.</p>
+<hr />
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<p>When you open XRM, the demo data seeder automatically loads a CRM-style schema with
+sample records on first run.</p>
+<blockquote>
+<p>The screenshots in this guide show the built-in demo data: Companies, Contacts,
+Products, Activities, Orders, and Order Lines. Your own schemas will look different
+but work the same way.</p>
+</blockquote>
+<h3 id="database">Database<a class="headerlink" href="#database" title="Permanent link">&para;</a></h3>
+<p>Everything is stored in a single <code>xrm.db</code> SQLite file. To back up, copy the file.
+To start fresh, delete it and restart the app.</p>
+<blockquote>
+<p><strong>Note:</strong> Code changes (bug fixes, new features) do not affect the database.
+Only EF model changes (adding columns, changing relationships) require either
+deleting <code>xrm.db</code> or running EF migrations.</p>
+</blockquote>
+<hr />
+<h2 id="part-1-schema-designer-design-time">Part 1: Schema Designer (Design Time)<a class="headerlink" href="#part-1-schema-designer-design-time" title="Permanent link">&para;</a></h2>
+<p>The Schema Designer is where you define the structure of your data. Access it via
+the <strong>Entities</strong> and <strong>Relationships</strong> links in the side navigation.</p>
+<h3 id="entities">Entities<a class="headerlink" href="#entities" title="Permanent link">&para;</a></h3>
+<p><img alt="Schema Designer" src="../images/Screenshot%202026-04-21%20091303.png" /></p>
+<p>An entity is a type of thing you want to track — Companies, Contacts, Products,
+Players, Matches, or anything else. Each entity gets its own record list and
+detail form in the runtime UI.</p>
+<p>To create an entity:
+1. Click <strong>+ New Entity</strong>
+2. Enter a <strong>Name</strong> (identifier, e.g. <code>Company</code>), <strong>Display Name</strong> (e.g. <code>Company</code>),
+   and <strong>Plural Name</strong> (e.g. <code>Companies</code>)
+3. Click <strong>Save</strong></p>
+<p>The entity immediately appears in the side navigation. You can mark one entity as
+<strong>Home</strong> — its record list will show on the start-up screen.</p>
+<h3 id="fields">Fields<a class="headerlink" href="#fields" title="Permanent link">&para;</a></h3>
+<p>Each entity has fields that define what data it holds. Click <strong>Fields</strong> on an entity
+card to manage them.</p>
+<p>Field properties:
+- <strong>Name</strong> — identifier used in the JSON data store
+- <strong>Display Name</strong> — label shown in the UI
+- <strong>Data Type</strong> — Text, Number, Decimal, Boolean, Date, DateTime, Choice, MultiChoice, AutoNumber, RichText, Email, Phone, URL
+- <strong>Required</strong> — marked with a red asterisk (<em>) in the form; validated on save
+- </em><em>Constraints</em><em> — max length, min/max value, regex pattern
+- </em><em>Options</em><em> — for Choice/MultiChoice fields, a list of allowed values (e.g. <code>["Low","Medium","High"]</code>)
+- </em><em>Sort Order</em>* — controls the display order of fields in the form and grid</p>
+<p>Fields are enforced at runtime: required fields must have a value, text respects
+max length, numbers respect min/max, and choice fields only accept defined options.</p>
+<h3 id="relationships">Relationships<a class="headerlink" href="#relationships" title="Permanent link">&para;</a></h3>
+<p><img alt="Relationships" src="../images/Screenshot%202026-04-21%20091308.png" /></p>
+<p>Relationships link two entities together. They are logical (metadata + link records),
+not database foreign keys.</p>
+<p>To create a relationship:
+1. Click <strong>+ New Relationship</strong> on the Relationships page
+2. Select a <strong>Parent Entity</strong> (the "one" side) and <strong>Child Entity</strong> (the "many" side)
+3. Choose a <strong>Name</strong> (e.g. <code>Company → Contacts</code>)
+4. Currently supported: <strong>OneToMany</strong> relationship type, with <strong>None</strong> or <strong>RemoveLink</strong> on delete</p>
+<p>In the runtime UI, relationships appear as:
+- A <strong>dropdown</strong> on the child's detail form (to select the parent)
+- A <strong>child grid</strong> on the parent's detail form (to see/manage children)</p>
+<hr />
+<h2 id="part-2-record-management-runtime">Part 2: Record Management (Runtime)<a class="headerlink" href="#part-2-record-management-runtime" title="Permanent link">&para;</a></h2>
+<h3 id="side-navigation">Side Navigation<a class="headerlink" href="#side-navigation" title="Permanent link">&para;</a></h3>
+<p>All entities are listed in the left sidebar, grouped by domain with collapsible
+headings. Click one to see its record list.</p>
+<p>Administrators also see a <strong>Settings</strong> group at the bottom with links to:
+- <strong>Entities</strong> — schema designer
+- <strong>Relationships</strong> — relationship designer
+- <strong>Security</strong> — user and role management</p>
+<h3 id="master-screen-record-grid">Master Screen — Record Grid<a class="headerlink" href="#master-screen-record-grid" title="Permanent link">&para;</a></h3>
+<p><img alt="Activity List" src="../images/Screenshot%202026-04-21%20091220.png" /></p>
+<p>The record grid shows all records of a given entity in a table. Features:</p>
+<ul>
+<li><strong>Filter</strong> — type in the filter box to search across all field values</li>
+<li><strong>Sort</strong> — click a column header to sort ascending; click again for descending</li>
+<li><strong>Pagination</strong> — navigate pages at the bottom; shows total record count</li>
+<li><strong>Multi-select</strong> — check records for bulk operations</li>
+<li><strong>Record navigation</strong> — prev/next buttons on the detail page carry your filter/sort context</li>
+<li><strong>Delete</strong> — click ✕ to delete individual records (writers only)</li>
+<li><strong>New</strong> — click <strong>+ New</strong> to create a record (writers only)</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> Users with Reader role see the grid in read-only mode — no New, Edit, or Delete actions.</p>
+</blockquote>
+<h3 id="detail-screen-create-edit">Detail Screen — Create &amp; Edit<a class="headerlink" href="#detail-screen-create-edit" title="Permanent link">&para;</a></h3>
+<p><img alt="Company Detail" src="../images/Screenshot%202026-04-21%20091241.png" /></p>
+<p>A single form is used for both creating and editing records. Fields are rendered
+based on their data type:</p>
+<table>
+<thead>
+<tr>
+<th>Data Type</th>
+<th>UI Control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Text, Email, Phone, URL</td>
+<td>Text input</td>
+</tr>
+<tr>
+<td>Number, Decimal</td>
+<td>Number input</td>
+</tr>
+<tr>
+<td>Boolean</td>
+<td>Checkbox</td>
+</tr>
+<tr>
+<td>Date, DateTime</td>
+<td>Date/time picker</td>
+</tr>
+<tr>
+<td>Choice</td>
+<td>Dropdown with defined options</td>
+</tr>
+<tr>
+<td>MultiChoice</td>
+<td>Checkbox group (multiple selections stored as JSON array)</td>
+</tr>
+<tr>
+<td>AutoNumber</td>
+<td>Read-only auto-generated value (see <a href="../patterns/autonumber/">AutoNumber</a>)</td>
+</tr>
+<tr>
+<td>RichText</td>
+<td>Textarea</td>
+</tr>
+</tbody>
+</table>
+<p>Required fields are marked with a red asterisk (*) and validated on save.</p>
+<h3 id="parent-relationships">Parent Relationships<a class="headerlink" href="#parent-relationships" title="Permanent link">&para;</a></h3>
+<p><img alt="Contact Detail" src="../images/Screenshot%202026-04-21%20091234.png" /></p>
+<p>When a record has a parent relationship (e.g. a Contact belongs to a Company),
+a <strong>dropdown</strong> appears at the bottom of the form showing the parent entity's records.
+Select a parent and click <strong>Save</strong> to link them.</p>
+<p>The <strong>↗ button</strong> next to the dropdown navigates directly to the parent record.</p>
+<h3 id="child-records">Child Records<a class="headerlink" href="#child-records" title="Permanent link">&para;</a></h3>
+<p><img alt="Company with Children" src="../images/Screenshot%202026-04-21%20091241.png" /></p>
+<p>Below the parent's form, child records are displayed in a full grid. In the example
+above, Contoso Ltd shows its linked Contacts and Orders.</p>
+<p>Actions available on the child grid:
+- <strong>+ Add</strong> — opens an inline form to create a new child record (automatically linked to the parent)
+- <strong>✎ Edit</strong> — opens the inline form pre-populated with existing data
+- <strong>✕ Delete</strong> — removes the child record and its link</p>
+<p>All child operations happen inline — no need to navigate away from the parent.</p>
+<h3 id="editing-an-activity">Editing an Activity<a class="headerlink" href="#editing-an-activity" title="Permanent link">&para;</a></h3>
+<p><img alt="Activity Detail" src="../images/Screenshot%202026-04-21%20091229.png" /></p>
+<p>This example shows editing an Activity record. Note the "Contact → Activities"
+parent dropdown showing "Donna" as the linked contact, with the ↗ navigation button.</p>
+<hr />
+<h2 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h2>
+<p>XRM exposes a REST API for external integrations. When running in development mode,
+Swagger UI is available at <strong>/swagger</strong>.</p>
+<p>Key endpoints:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/entities</code></td>
+<td>List all entities</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/entities</code></td>
+<td>Create an entity</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/entities/{id}</code></td>
+<td>Get entity with fields</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/entities/{id}</code></td>
+<td>Update an entity</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/entities/{id}</code></td>
+<td>Delete an entity</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/entities/{id}/fields</code></td>
+<td>List fields</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/entities/{id}/fields</code></td>
+<td>Create a field</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/entities/{id}/records</code></td>
+<td>List records (paginated)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/entities/{id}/records</code></td>
+<td>Create a record</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/entities/{id}/records/{rid}</code></td>
+<td>Update a record</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/entities/{id}/records/{rid}</code></td>
+<td>Delete a record</td>
+</tr>
+</tbody>
+</table>
+<p>Query parameters for record listing: <code>page</code>, <code>pageSize</code>, <code>sortField</code>, <code>sortDir</code>, <code>filter</code>.</p>
+<hr />
+<h2 id="demo-data">Demo Data<a class="headerlink" href="#demo-data" title="Permanent link">&para;</a></h2>
+<p>The app ships with a CRM-style demo schema inspired by AdventureWorksLT:</p>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Sample Records</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Company</td>
+<td>Contoso Ltd, Fabricam Inc, Adventure Works, Northwind Traders, Litware Corp</td>
+</tr>
+<tr>
+<td>Contact</td>
+<td>7 contacts across companies</td>
+</tr>
+<tr>
+<td>Product</td>
+<td>Mountain-100, Road-250, Touring-1000, HL Headset, Sport Helmet, Chain</td>
+</tr>
+<tr>
+<td>Activity</td>
+<td>3 activities (email, meeting, call)</td>
+</tr>
+<tr>
+<td>Order</td>
+<td>3 orders linked to companies</td>
+</tr>
+<tr>
+<td>Order Line</td>
+<td>5 order lines linking orders to products</td>
+</tr>
+</tbody>
+</table>
+<p>Demo data can be modified or deleted like any user-created content.</p>
+<hr />
+<h2 id="tech-stack">Tech Stack<a class="headerlink" href="#tech-stack" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend</td>
+<td>C# / .NET 10 (ASP.NET Core)</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td>Blazor Server (interactive SSR)</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>SQLite via EF Core</td>
+</tr>
+<tr>
+<td>Data model</td>
+<td>Fixed meta-schema with JSON field values</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>xUnit + WebApplicationFactory (104 tests)</td>
+</tr>
+<tr>
+<td>API docs</td>
+<td>Swagger / OpenAPI</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="domain-grouping">Domain Grouping<a class="headerlink" href="#domain-grouping" title="Permanent link">&para;</a></h2>
+<p>Entities can be assigned a <strong>Domain</strong> (e.g. "Sales", "Catalog", "Orders") in the
+Entity Designer. The side navigation groups entities by domain with collapsible
+headings. Entities without a domain appear ungrouped.</p>
+<p>Set <strong>Domain Sort Order</strong> to control the order of groups in the nav menu.</p>
+<hr />
+<h2 id="audit-trail">Audit Trail<a class="headerlink" href="#audit-trail" title="Permanent link">&para;</a></h2>
+<p>All record changes (create, update, delete) are automatically logged. On the record
+detail screen, expand the <strong>History</strong> section to see a timeline of changes with:
+- Timestamp and action type
+- Who made the change (user ID)
+- Field-level before → after values for updates</p>
+<p>No configuration needed — audit is always on.</p>
+<hr />
+<h2 id="lifecycle-hooks">Lifecycle Hooks<a class="headerlink" href="#lifecycle-hooks" title="Permanent link">&para;</a></h2>
+<p>Consumer applications can hook into record create/update/delete events to run
+business logic. See <a href="../patterns/lifecycle-hooks/">lifecycle-hooks</a> for the full guide.</p>
+<p>Post-save hooks return warnings (not failures) via <code>SaveResult</code>. See <a href="../patterns/lifecycle-hooks/#saveresult-and-warnings">lifecycle-hooks</a> for details.</p>
+<h2 id="state-machine-transitions">State Machine Transitions<a class="headerlink" href="#state-machine-transitions" title="Permanent link">&para;</a></h2>
+<p>Choice fields can optionally define allowed state transitions via <code>TransitionsJson</code> on <code>FieldDefinition</code>. The UI filters the dropdown and the server rejects invalid transitions on save. See <a href="../patterns/state-machines/">state-machines</a> for configuration examples.</p>
+<h2 id="cross-field-validation">Cross-Field Validation<a class="headerlink" href="#cross-field-validation" title="Permanent link">&para;</a></h2>
+<p>Entities can define declarative rules that validate relationships between fields (e.g., end date &gt; start date, conditional required fields). See <a href="../patterns/cross-field-validation/">cross-field-validation</a> for rule types and examples.</p>
+<h2 id="computed-fields">Computed Fields<a class="headerlink" href="#computed-fields" title="Permanent link">&para;</a></h2>
+<p>Fields of type <code>Computed</code> evaluate an expression on every read. Supports arithmetic (<code>UnitPrice + ShippingCost</code>), literals (<code>Subtotal * 1.21</code>), and aggregates (<code>COUNT(Order)</code>, <code>SUM(OrderLine.Amount)</code>). See <a href="../patterns/computed-fields/">computed-fields</a> for syntax and examples.</p>
+<h2 id="locale-aware-formatting">Locale-Aware Formatting<a class="headerlink" href="#locale-aware-formatting" title="Permanent link">&para;</a></h2>
+<p>Date, number, and boolean values are formatted for display using <code>CultureInfo.CurrentCulture</code>. The host controls the locale — XRM respects it automatically. See <a href="../patterns/locale-formatting/">locale-formatting</a> for setup options.</p>
+<h2 id="audit-trail-rest-api">Audit Trail REST API<a class="headerlink" href="#audit-trail-rest-api" title="Permanent link">&para;</a></h2>
+<p>In addition to the UI history panel, audit entries are available via the REST API:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>GET /api/entities/{entityId}/records/{id}/history?limit=50
+</code></pre></div>
+<p>Returns the change log with timestamps, old/new values, and action type.</p>
+<h2 id="authorization">Authorization<a class="headerlink" href="#authorization" title="Permanent link">&para;</a></h2>
+<p>XRM provides domain-based access control. Entities are scoped to domains; users get Reader/Writer/SystemAdmin roles per domain. See <a href="../patterns/authorization/">authorization</a> for full setup.</p>
+<p>Key points:
+- Call <code>AddXrmAuthorization()</code> after <code>AddXrmCore()</code> to enable
+- Configure any OIDC provider (Entra ID, Google, etc.) — XRM is provider-agnostic
+- Admin UI at <code>/admin/users</code> for role management
+- Without <code>AddXrmAuthorization()</code>, all access is permitted (dev mode)</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "navigation.indexes", "navigation.top", "content.code.copy", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
