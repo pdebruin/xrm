@@ -9,6 +9,7 @@
 @inject IRelationshipService RelationshipService
 @inject IAuditService AuditService
 @inject ICurrentUser CurrentUser
+@inject IFieldRendererRegistry FieldRendererRegistry
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
@@ -107,6 +108,15 @@ else
                         @(field.DisplayName ?? field.Name)
                         @if (field.IsRequired) { <span class="text-danger">*</span> }
                     </label>
+                    @{
+                        var customRenderer = FieldRendererRegistry.GetRenderer(_entityDef.Name, field.Name);
+                    }
+                    @if (customRenderer is not null)
+                    {
+                        <DynamicComponent Type="customRenderer" Parameters="@GetRendererParameters(field)" />
+                    }
+                    else
+                    {
                     @switch (field.DataType)
                     {
                         case FieldDataType.AutoNumber:
@@ -183,6 +193,7 @@ else
                                    value="@GetValue(field.Name)"
                                    @onchange="(e) => SetValue(field.Name, e.Value)" />
                             break;
+                    }
                     }
                 </div>
             }
@@ -575,7 +586,40 @@ else
         return v.Equals("true", StringComparison.OrdinalIgnoreCase) || v == "True";
     }
 
-    private void SetValue(string fieldName, object? value) => _data[fieldName] = value;
+    private void SetValue(string fieldName, object? value)
+    {
+        _data[fieldName] = value;
+        _recordDataJsonCache = null;
+    }
+
+    private Dictionary<string, object?> GetRendererParameters(FieldDefinition field)
+    {
+        return new Dictionary<string, object?>
+        {
+            ["Value"] = GetValue(field.Name),
+            ["ValueChanged"] = EventCallback.Factory.Create<string>(this, (string v) => SetValue(field.Name, v)),
+            ["Field"] = field,
+            ["Entity"] = _entityDef!,
+            ["RecordDataJson"] = _recordDataJsonCache ??= JsonSerializer.Serialize(_data),
+            ["ReadOnly"] = false,
+            ["ValidationChanged"] = EventCallback.Factory.Create<string?>(this, (string? err) => SetFieldValidation(field.Name, err))
+        };
+    }
+
+    private string? _recordDataJsonCache;
+
+    private readonly Dictionary<string, string?> _fieldValidationErrors = new();
+
+    private void SetFieldValidation(string fieldName, string? error)
+    {
+        if (error is null)
+            _fieldValidationErrors.Remove(fieldName);
+        else
+            _fieldValidationErrors[fieldName] = error;
+        StateHasChanged();
+    }
+
+    private bool HasCustomValidationErrors => _fieldValidationErrors.Count > 0;
 
     private HashSet<string> GetMultiChoiceValues(string fieldName)
     {
@@ -664,6 +708,14 @@ else
         _saving = true;
         _error = null;
         _warning = null;
+
+        if (HasCustomValidationErrors)
+        {
+            _error = string.Join("; ", _fieldValidationErrors.Values.Where(v => v is not null));
+            _saving = false;
+            return;
+        }
+
         try
         {
             var json = JsonSerializer.Serialize(_data);

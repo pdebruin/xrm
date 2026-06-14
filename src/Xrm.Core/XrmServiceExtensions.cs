@@ -28,6 +28,9 @@ public static class XrmServiceExtensions
         services.AddScoped<IRecordService, RecordService>();
         services.AddScoped<IAuditService, AuditService>();
 
+        // Field renderer registry (singleton — registrations happen at startup)
+        services.TryAddSingleton<IFieldRendererRegistry, FieldRendererRegistry>();
+
         // Default: permit all access (no auth configured). Overridden by AddXrmAuthorization().
         services.TryAddScoped<ICurrentUser, AnonymousCurrentUser>();
 
@@ -40,6 +43,18 @@ public static class XrmServiceExtensions
     public static IServiceCollection AddXrmSeeder<T>(this IServiceCollection services) where T : class, IDataSeeder
     {
         services.AddScoped<IDataSeeder, T>();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a custom Blazor field renderer for a specific entity+field combination.
+    /// The component must accept parameters: Value, ValueChanged, Field, Entity, RecordDataJson, ReadOnly, ValidationChanged.
+    /// </summary>
+    public static IServiceCollection AddXrmFieldRenderer(
+        this IServiceCollection services, string entityName, string fieldName, Type componentType, bool replace = false)
+    {
+        services.TryAddSingleton<IFieldRendererRegistry, FieldRendererRegistry>();
+        services.AddSingleton(new FieldRendererRegistration(entityName, fieldName, componentType, replace));
         return services;
     }
 }
